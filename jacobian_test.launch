@@ -1,0 +1,5 @@
+<launch>
+    <!-- Launch the jacobian_test node -->
+    <node pkg="kortex_examples" type="jacobian.py" name="jacobian_test" output="screen">
+    </node>
+</launch>

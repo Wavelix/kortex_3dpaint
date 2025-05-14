@@ -1,0 +1,10 @@
+<launch>
+
+    <!-- Robot namespace -->
+    <arg name="robot_name" default="my_gen3_lite"/>
+    <arg name="start_delay_seconds" default="0"/>
+
+    <!-- Launch the example in that namespace -->
+    <node name="control_node" pkg="kortex_3dpaint" type="pick_and_place_trajectories.py" ns="$(arg robot_name)" output="screen" launch-prefix="bash -c 'sleep $(arg start_delay_seconds); $0 $@' "/>
+
+</launch>
