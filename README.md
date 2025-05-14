@@ -26,10 +26,9 @@ Launching the real robot:
 roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
 ```
 ## More Instructions and Attention
-To run ``pick_and_palce.py``, try ``roslaunch kortex_3dpaint jacobian_test.launch __ns:=my_gen3_lite``
+To run ``pick_and_palce.py``, try ``roslaunch kortex_3dpaint pick_and_place.launch``
 
 
 To run ``pick_and_place_trajectories``, which use **MoveIt** , try ``rosrun kortex_3dpaint pick_and_place_trajectories.py __ns:=my_gen3_lite``
 > [!IMPORTANT]
 > ``pick_and_palce.py`` may encounter problems in Gazebo Simulation.
-> ``pick_and_place_trajectories`` may encounter problems in real robot, especially when gripper commands are used.
