@@ -37,13 +37,14 @@ sudo apt-get install ros-noetic-aruco-ros
 sudo apt-get install ros-noetic-realsense2-camera
 sudo apt-get install ros-noetic-realsense2-description
 sudo apt-get install ros-noetic-vision-opencv
+catkin_make
 ```
 
 连接相机，运行aruco：
 ```
-cd ~/catkin_workspace/src/ros_kortex
+cd ~/catkin_workspace
 source devel/setup.bash
-roslaunch aruco_realsense aruco_detection.launch
+roslaunch kortex_3dpaint aruco_detector.launch
 ```
 若运行出错：
 ```
@@ -51,7 +52,7 @@ sudo apt-get install ros-noetic-ddynamic-reconfigure
 catkin_make clean
 catkin_make -j$(nproc)
 source devel/setup.bash
-roslaunch aruco_realsense aruco_detection.launch
+roslaunch kortex_3dpaint aruco_detector.launch
 ```
 
 ## Attention
