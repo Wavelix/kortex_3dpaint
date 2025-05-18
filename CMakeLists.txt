@@ -6,7 +6,17 @@ add_compile_options(-std=c++11)
 add_definitions(-D_OS_UNIX)
 
 ## Find catkin and any catkin packages
-find_package(catkin REQUIRED COMPONENTS roscpp rospy std_msgs message_generation actionlib_msgs actionlib kortex_driver)
+find_package(catkin REQUIRED COMPONENTS roscpp 
+                                        rospy 
+                                        std_msgs 
+                                        message_generation 
+                                        actionlib_msgs 
+                                        actionlib 
+                                        kortex_driver 
+                                        sensor_msgs 
+                                        geometry_msgs 
+                                        aruco_msgs
+                                        aruco)
 
 ## Declare a catkin package
 catkin_package()

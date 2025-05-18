@@ -25,7 +25,36 @@ Launching the real robot:
 ```
 roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
 ```
-## More Instructions and Attention
+
+## Instructions
+### aruco设置教程
+First, to setup the realsense, please refer to the instructions in [CSDN](https://blog.csdn.net/wanghq2013/article/details/123325671).
+
+确保安装以下包：
+```
+sudo apt-get install ros-noetic-aruco
+sudo apt-get install ros-noetic-aruco-ros
+sudo apt-get install ros-noetic-realsense2-camera
+sudo apt-get install ros-noetic-realsense2-description
+sudo apt-get install ros-noetic-vision-opencv
+```
+
+连接相机，运行aruco：
+```
+cd ~/catkin_workspace/src/ros_kortex
+source devel/setup.bash
+roslaunch aruco_realsense aruco_detection.launch
+```
+若运行出错：
+```
+sudo apt-get install ros-noetic-ddynamic-reconfigure
+catkin_make clean
+catkin_make -j$(nproc)
+source devel/setup.bash
+roslaunch aruco_realsense aruco_detection.launch
+```
+
+## Attention
 To run ``pick_and_palce.py``, try ``roslaunch kortex_3dpaint pick_and_place.launch``
 
 

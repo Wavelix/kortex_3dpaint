@@ -1,0 +1,13 @@
+<launch>
+    <!-- 启动Realsense相机 -->
+    <include file="$(find realsense2_camera)/launch/rs_camera.launch">
+        <arg name="align_depth" value="false" />
+        <arg name="enable_pointcloud" value="false" />
+        <arg name="color_width" value="640" />
+        <arg name="color_height" value="480" />
+        <arg name="color_fps" value="30" />
+    </include>
+
+    <!-- 启动Aruco检测节点 -->
+    <node name="aruco_detector" pkg="kortex_3dpaint" type="aruco_detector.py" output="screen" />
+</launch>
