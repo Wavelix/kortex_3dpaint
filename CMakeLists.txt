@@ -32,5 +32,5 @@ include_directories(include ${PROJECT_SOURCE_DIR}/../kortex_api/include/common)
 
 ## Mark executable scripts (Python etc.) for installation
 ## in contrast to setup.py, you can choose the destination
-catkin_install_python(PROGRAMS src/test/pick_and_place_trajectories.py
+catkin_install_python(PROGRAMS src/test/pick_and_place_moveit.py
                       DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
