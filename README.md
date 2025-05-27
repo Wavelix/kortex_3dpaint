@@ -82,12 +82,14 @@ roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
 ```
 ### Basic Commands
 
-``pick_and_place_moveit.py`` -->  ``roslaunch kortex_3dpaint pick_and_place_moveit.launch`` ( recommended )
+``pick_and_place_moveit.py`` -->  ``roslaunch kortex_3dpaint pick_and_place_moveit.launch __ns:=my_gen3_lite`` ( recommended )
 
 ``pick_and_place.py`` --> ``roslaunch kortex_3dpaint pick_and_place.launch`` ( not recommended )
 
 > [!important]
 >
 > ``pick_and_place.py`` may encounter problems in Gazebo currently. 
+
+``arm_control.py`` --> ``roslaunch kortex_3dpaint arm_control.launch __ns:=my_gen3_lite``
 
 ``aruco_detector.py`` --> ``roslaunch kortex_3dpaint aruco_detector.launch``
