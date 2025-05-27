@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+#roslaunch kortex_3dpaint arm_control.launch __ns:=my_gen3_lite
+
 import sys
 import time
 import rospy
@@ -18,7 +20,7 @@ class MoveItArm(object):
     # Initialize the node
     super(MoveItArm, self).__init__()
     moveit_commander.roscpp_initialize(sys.argv)
-    rospy.init_node('pick_and_place_moveit_node')
+    rospy.init_node('arm_control')
 
     try:
       self.is_gripper_present = rospy.get_param(rospy.get_namespace() + "is_gripper_present", False)
@@ -53,13 +55,9 @@ class MoveItArm(object):
   def reach_named_position(self, target):
     arm_group = self.arm_group
     
-    # Going to one of those targets
     rospy.loginfo("Going to named target " + target)
-    # Set the target
     arm_group.set_named_target(target)
-    # Plan the trajectory
     (success_flag, trajectory_message, planning_time, error_code) = arm_group.plan()
-    # Execute the trajectory and block while it's not finished
     return arm_group.execute(trajectory_message, wait=True)
 
   def reach_joint_angles(self, tolerance, J=[0,0,pi/2,pi/4,0,pi/2]):
@@ -130,25 +128,21 @@ class MoveItArm(object):
     except:
       return False 
 
+"""
+------------------------------------------
+main function
+------------------------------------------
+"""
+
 def main():
   example = MoveItArm()
 
-  # For testing purposes
   success = example.is_init_success
   try:
       rospy.delete_param("/kortex_examples_test_results/moveit_general_python")
   except:
       pass
 
-  # if success:
-  #   rospy.loginfo("Reaching Named Target Vertical...")
-  #   success &= example.reach_named_position("vertical")
-  #   print (success)
-  
-  # if success:
-  #   rospy.loginfo("Reaching Joint Angles...")  
-  #   success &= example.reach_joint_angles(tolerance=0.01)  # rad
-  #   print (success)
   
   # Reaching Home
   if success:
@@ -156,27 +150,29 @@ def main():
     success &= example.reach_named_position("home")
     print (success)
 
-  # Reaching picking pose
-  # if success: 
-  #   rospy.loginfo("Reaching Picking Pose...")
-  #   picking_pose = example.get_cartesian_pose()
-  #   picking_pose.position.y -= 0.2
-  #   success &= example.reach_cartesian_pose(pose=picking_pose, tolerance=0.01, constraints=None)
-  #   print (success)
-
   # Open gripper
   if example.is_gripper_present and success:
     rospy.loginfo("Opening the gripper...")
     success &= example.reach_gripper_position(0.9)
     print (success)
 
+  # Reach the pen
+  if success:
+    rospy.loginfo("Reaching...")
+    pose = example.get_cartesian_pose()
+    pose.position.x = 0.25
+    pose.position.y = 0.1
+    pose.position.z = 0.15
+    pose.orientation = geometry_msgs.msg.Quaternion(*quaternion_from_euler(pi, 0, pi/2))
+    success &= example.reach_cartesian_pose(pose=pose, tolerance=0.01, constraints=None)
+    print (success)
   # Downward 0.1
-  # if success: 
-  #   rospy.loginfo("Picking ...")
-  #   actual_pose = example.get_cartesian_pose()
-  #   actual_pose.position.z -= 0.1
-  #   success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=None)
-  #   print (success)
+  if success: 
+    rospy.loginfo("Picking ...")
+    actual_pose = example.get_cartesian_pose()
+    actual_pose.position.z -= 0.1
+    success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=None)
+    print (success)
 
   # Close gripper
   if example.is_gripper_present and success:
@@ -184,50 +180,27 @@ def main():
     success &= example.reach_gripper_position(0.0)
     print (success)
 
+  # Pick up the pen
   if success:
-    rospy.loginfo("Reaching Joint Angles...")  
-    success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/2])  # rad
+    rospy.loginfo("Picking up the pen...")
+    success &= example.reach_named_position("home")
     print (success)
+
+#   if success:
+#     rospy.loginfo("Reaching Joint Angles...")  
+#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/2])  # rad
+#     print (success)
   
-  if success:
-    rospy.loginfo("Reaching Joint Angles...")  
-    success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/4])  # rad
-    print (success)
+#   if success:
+#     rospy.loginfo("Reaching Joint Angles...")  
+#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/4])  # rad
+#     print (success)
 
-  if success:
-    rospy.loginfo("Reaching Joint Angles...")  
-    success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,3*pi/4])  # rad
-    print (success)
+#   if success:
+#     rospy.loginfo("Reaching Joint Angles...")  
+#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,3*pi/4])  # rad
+#     print (success)
     
-  # if success:
-  #   rospy.loginfo("Reaching Joint Angles...")  
-  #   success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,0])  # rad
-  #   print (success)
-
-  # Reaching placing pose
-  # if success:
-  #   rospy.loginfo("Reaching Placing Pose...")
-  #   up_pose = example.get_cartesian_pose()
-  #   up_pose.position.z -= 0.1
-  #   success &= example.reach_cartesian_pose(pose=up_pose, tolerance=0.01, constraints=None)
-  #   print (success)
-
-  # if success:
-  #   rospy.loginfo("Reaching Placing Pose...")
-  #   placing_pose = example.get_cartesian_pose()
-  #   placing_pose.position.x -= 0.15
-  #   placing_pose.position.y += 0.15
-  #   # placing_pose.orientation.x += 0.05
-  #   success &= example.reach_cartesian_pose(pose=placing_pose, tolerance=0.01, constraints=None)
-  #   print (success)
-
-  # Open gripper
-  # if example.is_gripper_present and success:
-  #   rospy.loginfo("Opening the gripper...")
-  #   success &= example.reach_gripper_position(1)
-  #   print (success)
-
-  # For testing purposes
   rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
 
   if not success:

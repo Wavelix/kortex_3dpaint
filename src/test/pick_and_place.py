@@ -10,7 +10,7 @@ from kortex_driver.msg import *
 class ArmMovement:
     def __init__(self):
         try:
-            rospy.init_node('arm_movement_python')
+            rospy.init_node('pick_and_place_node')
 
             self.HOME_ACTION_IDENTIFIER = 2
 
@@ -221,26 +221,33 @@ class ArmMovement:
 
             # Move to position A
             success &= self.example_send_cartesian_pose(0.5, 0.2, 0.1, 90, 0, 90) 
+            
             # Open gripper
-            if self.is_gripper_present:
-                success &= self.example_send_gripper_command(0.0)
+            # if self.is_gripper_present:
+            #     success &= self.example_send_gripper_command(0.0)
+            
             # Move down to pick object
-            success &= self.example_send_cartesian_pose(0.5, 0.2, -0.02, 90, 0, 90)  
+            # success &= self.example_send_cartesian_pose(0.5, 0.2, -0.02, 90, 0, 90)  
+            
             # Close gripper to grasp object
             if self.is_gripper_present:
                 success &= self.example_send_gripper_command(1.0)
+            
             # Move up with object
             success &= self.example_send_cartesian_pose(0.5, 0.2, 0.2, 90, 0, 90)  
 
             # Move to position B
-            success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)  
+            # success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)  
+            
             # Move down to place object
-            success &= self.example_send_cartesian_pose(0.3, -0.2, 0.02, 90, 0, 90)  
+            # success &= self.example_send_cartesian_pose(0.3, -0.2, 0.02, 90, 0, 90)  
+            
             # Open gripper to release object
-            if self.is_gripper_present:
-                success &= self.example_send_gripper_command(0.0)
+            # if self.is_gripper_present:
+            #     success &= self.example_send_gripper_command(0.0)
+            
             # Move up
-            success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90) 
+            success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)
 
             # Return to home position
             success &= self.example_home_the_robot()

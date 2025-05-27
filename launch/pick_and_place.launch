@@ -5,7 +5,7 @@
     <arg name="start_delay_seconds" default="0"/>
 
     <!-- Launch the example in that namespace -->
-    <node name="arm_movement_python" pkg="kortex_3dpaint" type="pick_and_place.py" output="screen" launch-prefix="bash -c 'sleep $(arg start_delay_seconds); $0 $@' ">
+    <node name="pick_and_place_node" pkg="kortex_3dpaint" type="pick_and_place.py" output="screen" launch-prefix="bash -c 'sleep $(arg start_delay_seconds); $0 $@' ">
         <param name="robot_name" value="$(arg robot_name)"/>
     </node>
 
