@@ -1,4 +1,5 @@
 # kortex_3dpaint
+
 Project for EE368 Robot Motion and Control, SUSTech
 
 > [!WARNING]
@@ -6,59 +7,87 @@ Project for EE368 Robot Motion and Control, SUSTech
 
 Reference [Kinovarobotics/ros_kortex](https://github.com/Kinovarobotics/ros_kortex)
 
-## Installation Steps
+## Installation
+
+### Setup
+
 ```
 cd ~/catkin_workspace/src/ros_kortex
 git clone git@github.com:Wavelix/kortex_3dpaint.git
 cd ~/catkin_workspace
 catkin_make
 ```
-## Launch the Robot
-```
-source devel/setup.bash
-```
-Launching the Robot in Gazebo Simulation:
-```
-roslaunch kortex_gazebo spawn_kortex_robot.launch arm:=gen3_lite
-```
-Launching the real robot:
-```
-roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
-```
 
-## Instructions
-### aruco设置教程
-First, to setup the realsense, please refer to the instructions in [CSDN](https://blog.csdn.net/wanghq2013/article/details/123325671).
+### ArUco Setup
 
-确保安装以下包：
+First, to setup the **RealSense**, please refer to the instructions in [CSDN](https://blog.csdn.net/wanghq2013/article/details/123325671).
+
+Make sure the following packages are installed：
+
 ```
 sudo apt-get install ros-noetic-aruco
 sudo apt-get install ros-noetic-aruco-ros
 sudo apt-get install ros-noetic-realsense2-camera
 sudo apt-get install ros-noetic-realsense2-description
 sudo apt-get install ros-noetic-vision-opencv
+```
+
+```
+cd ~/catkin_workspace
 catkin_make
 ```
 
-连接相机，运行aruco：
+Connect to the **RealSense**, then launch the **ArUco**：
+
 ```
 cd ~/catkin_workspace
 source devel/setup.bash
 roslaunch kortex_3dpaint aruco_detector.launch
 ```
-若运行出错：
+
+If error occurs：
+
 ```
 sudo apt-get install ros-noetic-ddynamic-reconfigure
+cd ~/catkin_workspace
 catkin_make clean
 catkin_make -j$(nproc)
 source devel/setup.bash
 roslaunch kortex_3dpaint aruco_detector.launch
 ```
 
-## Attention
-To run ``pick_and_palce.py``, try ``roslaunch kortex_3dpaint pick_and_place.launch``
+## Instructions
 
+> [!important]
+>
+> Run the following commands after any new terminal opened:
+>
+> ```
+> cd ~/catkin_workspace
+> source devel/setup.bash
+> ```
 
-To run ``pick_and_place_trajectories``, which use **MoveIt** , try ``rosrun kortex_3dpaint pick_and_place_trajectories.py __ns:=my_gen3_lite``
-> [!IMPORTANT]
-> ``pick_and_palce.py`` may encounter problems in Gazebo Simulation.
+### Launch the Robot
+
+Launch the robot in Gazebo simulation:
+
+```
+roslaunch kortex_gazebo spawn_kortex_robot.launch arm:=gen3_lite
+```
+
+Launch the real robot:
+
+```
+roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
+```
+### Basic Commands
+
+``pick_and_place_moveit.py`` -->  ``roslaunch kortex_3dpaint pick_and_place_moveit.launch`` ( recommended )
+
+``pick_and_place.py`` --> ``roslaunch kortex_3dpaint pick_and_place.launch`` ( not recommended )
+
+> [!important]
+>
+> ``pick_and_place.py`` may encounter problems in Gazebo currently. 
+
+``aruco_detector.py`` --> ``roslaunch kortex_3dpaint aruco_detector.launch``
