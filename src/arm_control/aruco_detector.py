@@ -14,7 +14,7 @@ class ArucoDetector:
         self.bridge = CvBridge()
         self.camera_matrix = None
         self.dist_coeffs = None
-        self.marker_length = 0.05  # 根据你的Aruco标记实际大小调整（单位：米）
+        self.marker_length = 0.05  # 根据Aruco标记实际大小调整（单位：米）
         
         # 订阅相机图像和相机信息
         self.image_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.image_callback)

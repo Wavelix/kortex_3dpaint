@@ -1,0 +1,5 @@
+<launch>
+    <!-- Launch the jacobian_test node -->
+    <node pkg="kortex_3dpaint" type="Dynamics.py" name="dynamics_test" output="screen">
+    </node>
+</launch>

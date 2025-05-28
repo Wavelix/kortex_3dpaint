@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import math
 
 import numpy as np
@@ -134,58 +136,93 @@ class NLinkArm:
         return np.array(basic_jacobian_mat).T
 
     def get_torque(self, thetas, thetas_d, theta_dd, f_ext, n_ext):
+        """Calculate joint torques using recursive algorithm.
+            thetas: List of joint angles
+            thetas_d: List of joint velocities
+            theta_dd: List of joint accelerations
+            f_ext: External force applied at e.e. in base frame
+            n_ext: External torque applied at end-effector in base frame
+            tau: List of joint torques
+        """        
         f_ext = np.array(f_ext).T
         n_ext = np.array(n_ext).T
 
         link_num = len(self.link_list)
-        R_i_iplus1_list = np.zeros((3,3,link_num))
-        P_i_iplus1_list = np.zeros((3,link_num))
-        P_i_c_list = np.zeros((3,link_num+1))
+        R_i_iplus1_list = np.zeros((3,3,link_num))  # Rotation matrices between links
+        P_i_iplus1_list = np.zeros((3,link_num))    # Position vectors between links
+        P_i_c_list = np.zeros((3,link_num+1))       # Center of mass positions
+
+        # Forward
+        # Compute transformation matrices and centers of mass
         for i in range(link_num):
+            # Get transformation matrix from link i to i+1
             T_i_iplus1 = self.link_list[i].transformation_matrix(thetas[i])
             R_i_iplus1_list[:,:,i] = T_i_iplus1[:3,:3]
             P_i_iplus1_list[:,i] = T_i_iplus1[:3, 3]
+            # Store center of mass position for link i+1
             P_i_c_list[:,i+1] = self.link_list[i].center
 
-        omega = np.zeros((3, link_num+1))
-        omega_d = np.zeros((3, link_num+1))
-        v_dot_i = np.zeros((3, link_num+1))
-        v_dot_c = np.zeros((3, link_num+1))
-        v_dot_i[:, 0] = [0, 0, 9.8]
-        F = np.zeros((3, link_num+1))
-        N = np.zeros((3, link_num+1))
+        omega = np.zeros((3, link_num+1))   # Angular velocity of each link
+        omega_d = np.zeros((3, link_num+1)) # Angular acceleration of each link
+        v_dot_i = np.zeros((3, link_num+1)) # Linear acceleration of each link
+        v_dot_c = np.zeros((3, link_num+1)) # Linear acceleration of center of mass of each link
+        v_dot_i[:, 0] = [0, 0, 9.8]         # Gravity acceleration in base frame
+        F = np.zeros((3, link_num+1))       # Force on each link
+        N = np.zeros((3, link_num+1))       # Torque on each link
 
+        # Forward recursion
+        # Compute velocities and accelerations
         for i in range(link_num):
-            R = R_i_iplus1_list[:,:,i].T
-            m = self.link_list[i].mass
-            P_i_iplus1 = P_i_iplus1_list[:,i]
-            P_iplus1_c = P_i_c_list[:,i+1]
-            I_iplus1 = self.link_list[i].inertia_tensor
+            R = R_i_iplus1_list[:,:,i].T        # Rotation matrix from i to i+1
+            m = self.link_list[i].mass          # Mass of link i
+            P_i_iplus1 = P_i_iplus1_list[:,i]   # Position vector from i to i+1
+            P_iplus1_c = P_i_c_list[:,i+1]      # Position vector of center of mass of link i+1
+            I_iplus1 = self.link_list[i].inertia_tensor # Inertia tensor of link i+1
+
+            # Joint velocity in z-direction
             theta_dot_z = thetas_d[i]*np.array([0, 0, 1]).T
+
+            # Angular velocity propagation
             omega[:, i+1] = R.dot(omega[:, i]) + theta_dot_z
+
+            # Linear acceleration propagation
             omega_d[:, i+1] = R.dot(omega_d[:, i]) + np.cross(
                 R.dot(omega[:, i]), theta_dot_z) + theta_dd[i]*np.array([0, 0, 1]).T
+            
+            # Linear acceleration propagation
             v_dot_i[:, i+1] = R.dot(np.cross(omega_d[:, i], P_i_iplus1)+np.cross(
                 omega_d[:, i], np.cross(omega_d[:, i], P_i_iplus1))+v_dot_i[:, i])
+            
+            # Linear acceleration of center of mass
             v_dot_c[:, i+1] = np.cross(omega_d[:, i+1], P_iplus1_c) + np.cross(
                 omega[:, i+1], np.cross(omega[:, i+1], P_iplus1_c)) + v_dot_i[:, i+1]
+            
+            # Force and torque on link i+1
             F[:, i+1] = m*v_dot_c[:, i+1]
             N[:, i+1] = I_iplus1.dot(omega_d[:, i+1]) + \
                 np.cross(omega[:, i+1], I_iplus1.dot(omega[:, i+1]))
 
-        f = np.zeros((3, link_num+1))
-        n = np.zeros((3, link_num+1))
-        tau = np.zeros(link_num+1)
+        # Backward recursion
+        # Compute forces and torques
+        f = np.zeros((3, link_num+1))   # Force exerted by link i-1 on link i
+        n = np.zeros((3, link_num+1))   # Torque exerted by link i-1 on link i
+        tau = np.zeros(link_num+1)      # Joint torques
 
         for i in range(link_num, 0, -1):
             R = T_i_iplus1[:3, :3]
             if i == link_num:
+                # e.e. link - include external forces
                 f[:,i] = f_ext + F[:,i]
                 n[:,i] = N[:,i] + n_ext + np.cross(P_i_c_list[:,i],F[:,i])
                 tau[i] = n[:,i].T.dot(np.array([0, 0, 1]).T)
             else:
-                R = R_i_iplus1_list[:,:,i]
+                # Intermediate links
+                R = R_i_iplus1_list[:,:,i]  # Rotation from i+1 to i
+
+                # Force propagation
                 f[:,i] = R.dot(f[:,i+1]) + F[:,i]
+
+                # Torque propagation
                 n[:,i] = N[:,i] + R.dot(n[:,i+1]) + np.cross(P_i_c_list[:,i],F[:,i]) + np.cross(P_i_iplus1_list[:,i],R.dot(f[:,i+1]))
                 tau[i] = n[:,i].T.dot(np.array([0, 0, 1]).T)
         return tau[1:]

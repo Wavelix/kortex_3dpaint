@@ -142,7 +142,6 @@ def main():
       rospy.delete_param("/kortex_examples_test_results/moveit_general_python")
   except:
       pass
-
   
   # Reaching Home
   if success:
@@ -153,19 +152,24 @@ def main():
   # Open gripper
   if example.is_gripper_present and success:
     rospy.loginfo("Opening the gripper...")
-    success &= example.reach_gripper_position(0.9)
+    success &= example.reach_gripper_position(0.6)
     print (success)
 
   # Reach the pen
   if success:
     rospy.loginfo("Reaching...")
     pose = example.get_cartesian_pose()
-    pose.position.x = 0.25
-    pose.position.y = 0.1
-    pose.position.z = 0.15
-    pose.orientation = geometry_msgs.msg.Quaternion(*quaternion_from_euler(pi, 0, pi/2))
+    pose.position.x = 0.15
+    pose.position.y = -0.2
+    pose.position.z = 0.125
+    pose.orientation = geometry_msgs.msg.Quaternion(*quaternion_from_euler(0, pi, pi/4))
     success &= example.reach_cartesian_pose(pose=pose, tolerance=0.01, constraints=None)
     print (success)
+  # if success:
+  #   rospy.loginfo("Reaching Joint Angles...")  
+  #   success &= example.reach_joint_angles(tolerance=0.01, J=[0.387,-0.507,0.680,-0.198,-1.185,0.485])  # rad
+  #   print (success)
+
   # Downward 0.1
   if success: 
     rospy.loginfo("Picking ...")
@@ -179,6 +183,14 @@ def main():
     rospy.loginfo("Closing the gripper ...")
     success &= example.reach_gripper_position(0.0)
     print (success)
+
+  # upwardward 0.06
+  # if success: 
+  #   rospy.loginfo("Picking ...")
+  #   actual_pose = example.get_cartesian_pose()
+  #   actual_pose.position.z += 0.06
+  #   success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=None)
+  #   print (success)
 
   # Pick up the pen
   if success:
