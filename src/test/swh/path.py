@@ -28,6 +28,12 @@ def get_local_center_normal(idx):
     tbl = {
         0: (( half, half, half), (0,0,1)),      # 顶点 0, 法向 +Z
         1: (( half, half,-half), (0,0,1)),      # 自行拓展 7 顶点 + 12 边
+        2: (( half,-half,half),(0,0,1)),
+        3: (( half,-half,-half),(0,0,1)),
+        4: (( -half,half,half),(0,0,1)),
+        5: (( -half,half,-half),(0,0,1)),
+        6: (( -half,-half,half),(0,0,1)),
+        7: (( -half,-half,-half),(0,0,1)),
     }
     return tbl[idx]
 
