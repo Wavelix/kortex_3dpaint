@@ -6,8 +6,8 @@ from std_srvs.srv import SetBool, SetBoolResponse
 import tf.transformations as tf
 
 # === 全局可调参数 ===
-L = rospy.get_param("/cube_edge", 0.05)   # 立方体边长 10 cm
-R = 0.03                                   # 默认圆半径
+L = rospy.get_param("/cube_edge", 0.05)   # 立方体边长 5 cm
+R = 0.02                                   # 默认圆半径
 IDX = 0                                    # 默认投影在顶点 0
 
 # 1️⃣ 服务：动态修改半径 & 位置 ----------------------------
