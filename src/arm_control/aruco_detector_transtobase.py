@@ -235,3 +235,18 @@ if __name__ == '__main__':
         pass
     finally:
         cv2.destroyAllWindows()
+
+"""
+[ERROR] [1748426864.891239]: bad callback: <bound method ArucoDetector.image_callback of <__main__.ArucoDetector object at 0x7f81fcc87700>>
+Traceback (most recent call last):
+  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/topics.py", line 750, in _invoke_callback
+    cb(msg)
+  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 168, in image_callback
+    T_base_cam = self.camera_calc.test(self.joint_angles)
+  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 104, in test
+    self.print_output("T for base to camera:", T)
+  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 90, in print_output
+    alpha, beta, gamma = self.matrix_to_euler_xyz(T)
+TypeError: matrix_to_euler_xyz() takes 1 positional argument but 2 were given
+
+"""

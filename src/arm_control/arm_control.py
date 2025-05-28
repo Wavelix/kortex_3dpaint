@@ -17,7 +17,6 @@ class MoveItArm(object):
   """ExampleMoveItTrajectories"""
   def __init__(self):
 
-    # Initialize the node
     super(MoveItArm, self).__init__()
     moveit_commander.roscpp_initialize(sys.argv)
     rospy.init_node('arm_control')
@@ -193,10 +192,10 @@ def main():
   #   print (success)
 
   # Pick up the pen
-  if success:
-    rospy.loginfo("Picking up the pen...")
-    success &= example.reach_named_position("home")
-    print (success)
+  # if success:
+  #   rospy.loginfo("Picking up the pen...")
+  #   success &= example.reach_named_position("home")
+  #   print (success)
 
 #   if success:
 #     rospy.loginfo("Reaching Joint Angles...")  
