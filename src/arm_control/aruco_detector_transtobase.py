@@ -65,7 +65,7 @@ class CameraPositionCalculator:
             T =  T @ T_i
         return T
 
-    def matrix_to_euler_xyz(T):
+    def matrix_to_euler_xyz(self,T):
         r11, r12, r13 = T[0, :3]
         r21, r22, r23 = T[1, :3]
         r31, r32, r33 = T[2, :3]
@@ -129,7 +129,7 @@ class ArucoDetector:
         
         rospy.loginfo("Aruco detector node initialized")
 
-    def build_homogeneous_matrix(rvec, tvec):
+    def build_homogeneous_matrix(self,rvec, tvec):
         R, _ = cv2.Rodrigues(rvec)
         T = np.eye(4)
         T[:3, :3] = R
@@ -183,21 +183,38 @@ class ArucoDetector:
                 rospy.loginfo(f"物块在 base 坐标系下的位置：{pos}")
                 rospy.loginfo(f"姿态（欧拉角）：Roll={euler[0]:.2f}°, Pitch={euler[1]:.2f}°, Yaw={euler[2]:.2f}°")
                 
-                # 创建位姿消息
+                # # 创建位姿消息
+                # pose_msg = PoseStamped()
+                # pose_msg.header.stamp = rospy.Time.now()
+                # pose_msg.header.frame_id = "camera_color_optical_frame"  # 根据你的相机帧ID调整
+                
+                # # 设置位置
+                # pose_msg.pose.position.x = tvecs[i][0][0]
+                # pose_msg.pose.position.y = tvecs[i][0][1]
+                # pose_msg.pose.position.z = tvecs[i][0][2]
+                
+                # # 设置姿态（将旋转向量转换为四元数）
+                # rotation_matrix = np.eye(4)
+                # rotation_matrix[0:3, 0:3] = cv2.Rodrigues(rvecs[i][0])[0]
+                # quaternion = self.rotation_matrix_to_quaternion(rotation_matrix[0:3, 0:3])
+                
+                # pose_msg.pose.orientation.x = quaternion[0]
+                # pose_msg.pose.orientation.y = quaternion[1]
+                # pose_msg.pose.orientation.z = quaternion[2]
+                # pose_msg.pose.orientation.w = quaternion[3]
+
+                # 从 T_base_obj 中提取
                 pose_msg = PoseStamped()
                 pose_msg.header.stamp = rospy.Time.now()
-                pose_msg.header.frame_id = "camera_color_optical_frame"  # 根据你的相机帧ID调整
-                
-                # 设置位置
-                pose_msg.pose.position.x = tvecs[i][0][0]
-                pose_msg.pose.position.y = tvecs[i][0][1]
-                pose_msg.pose.position.z = tvecs[i][0][2]
-                
-                # 设置姿态（将旋转向量转换为四元数）
-                rotation_matrix = np.eye(4)
-                rotation_matrix[0:3, 0:3] = cv2.Rodrigues(rvecs[i][0])[0]
-                quaternion = self.rotation_matrix_to_quaternion(rotation_matrix[0:3, 0:3])
-                
+                pose_msg.header.frame_id = "base_link"  # 修改为 base 坐标系
+
+                # 位置
+                pose_msg.pose.position.x = pos[0]
+                pose_msg.pose.position.y = pos[1]
+                pose_msg.pose.position.z = pos[2]
+
+                # 四元数
+                quaternion = self.rotation_matrix_to_quaternion(R)
                 pose_msg.pose.orientation.x = quaternion[0]
                 pose_msg.pose.orientation.y = quaternion[1]
                 pose_msg.pose.orientation.z = quaternion[2]
@@ -235,18 +252,3 @@ if __name__ == '__main__':
         pass
     finally:
         cv2.destroyAllWindows()
-
-"""
-[ERROR] [1748426864.891239]: bad callback: <bound method ArucoDetector.image_callback of <__main__.ArucoDetector object at 0x7f81fcc87700>>
-Traceback (most recent call last):
-  File "/opt/ros/noetic/lib/python3/dist-packages/rospy/topics.py", line 750, in _invoke_callback
-    cb(msg)
-  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 168, in image_callback
-    T_base_cam = self.camera_calc.test(self.joint_angles)
-  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 104, in test
-    self.print_output("T for base to camera:", T)
-  File "/home/lixing/catkin_workspace/src/ros_kortex/kortex_3dpaint/src/arm_control/aruco_detector_transtobase.py", line 90, in print_output
-    alpha, beta, gamma = self.matrix_to_euler_xyz(T)
-TypeError: matrix_to_euler_xyz() takes 1 positional argument but 2 were given
-
-"""
