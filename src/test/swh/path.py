@@ -58,11 +58,13 @@ def build_uv(n):
 # ---------- 工具：把点压到最近面 ----------
 def snap_to_face(p):
     half = L/2.0
-    d = [abs(p[i]) - half for i in range(3)]   # 超界量
-    axis = d.index(max(d))                     # 最大超界轴
-    if d[axis] > 1e-6:                         # 真正越界才修
-        p[axis] = math.copysign(half, p[axis])
-    return p
+    d = [abs(p[i]) - half for i in range(3)]
+    axis = d.index(max(d))
+    sign = 1 if p[axis] >= 0 else -1
+    if d[axis] > 1e-6:
+        p[axis] = sign * half
+    return p, axis, sign        # <─ 新增 axis & sign
+
 
 # ---------- 主回调：收到立方体 Pose → 发布 Path ----------
 def pose_cb(msg):
