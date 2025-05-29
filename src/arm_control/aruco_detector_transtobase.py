@@ -134,7 +134,7 @@ class ArucoDetector:
         R, _ = cv2.Rodrigues(rvec)
         T = np.eye(4)
         T[:3, :3] = R
-        T[:3, 3] = tvec
+        T[:3, 3] = tvec * 1000
         return T
 
     def camera_info_callback(self, msg):
