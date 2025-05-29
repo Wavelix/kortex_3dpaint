@@ -97,10 +97,10 @@ class CameraPositionCalculator:
         print("\n")
     
     def test(self,angles):
-        angles[1] += 90
-        angles[2] += 90
-        angles[3] += 90
-        angles[5] -= 90
+        # angles[1] += 90
+        # angles[2] += 90
+        # angles[3] += 90
+        # angles[5] -= 90
         T = self.forward_kinematics(angles)
         self.print_output("T for base to camera:", T)
         return T
@@ -246,6 +246,11 @@ if __name__ == '__main__':
     try:
         camera_calc = CameraPositionCalculator()
         joint_angles = [0, 0, 0, 0, 0, 0]  # 示例，替换为实时读取的角度
+
+        joint_angles[1] += 90
+        joint_angles[2] += 90
+        joint_angles[3] += 90
+        joint_angles[5] -= 90
 
         detector = ArucoDetector(camera_calc, joint_angles)
         rospy.spin()
