@@ -9,10 +9,10 @@ from cv_bridge import CvBridge, CvBridgeError
 
 import numpy as np
 
-def matrix_to_euler_xyz(T):
-    r11, r12, r13 = T[0, :3]
-    r21, r22, r23 = T[1, :3]
-    r31, r32, r33 = T[2, :3]
+def matrix_to_euler_xyz(R):
+    r11, r12, r13 = R[0, :]
+    r21, r22, r23 = R[1, :]
+    r31, r32, r33 = R[2, :]
 
     if np.abs(r31) != 1:
         beta = -np.arcsin(r31)
@@ -88,7 +88,7 @@ class CameraPositionCalculator:
 
     def print_output(self,name, T):
         px, py, pz = T[:3, 3]
-        alpha, beta, gamma = matrix_to_euler_xyz(T)
+        alpha, beta, gamma = matrix_to_euler_xyz(T[:3,:3])
         print(f"{name}:")
         # print(f"Position: px={px:.1f} mm, py={py:.1f} mm, pz={pz:.1f} mm")
         # print(f"Euler angles: α={alpha:.1f}°, β={beta:.1f}°, γ={gamma:.1f}°\n")
@@ -177,7 +177,7 @@ class ArucoDetector:
 
                 pos = T_base_obj[:3, 3]
                 R = T_base_obj[:3, :3]
-                euler = CameraPositionCalculator.matrix_to_euler_xyz(R)
+                euler = matrix_to_euler_xyz(R)
 
                 # rospy.loginfo("Position: %s", str(tvecs[i][0]))
                 # rospy.loginfo("Rotation: %s", str(rvecs[i][0]))
