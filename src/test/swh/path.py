@@ -58,11 +58,13 @@ def build_uv(n):
 # ---------- 工具：把点压到最近面 ----------
 def snap_to_face(p):
     half = L/2.0
-    d = [abs(p[i]) - half for i in range(3)]   # 超界量
-    axis = d.index(max(d))                     # 最大超界轴
-    if d[axis] > 1e-6:                         # 真正越界才修
-        p[axis] = math.copysign(half, p[axis])
-    return p
+    d = [abs(p[i]) - half for i in range(3)]
+    axis = d.index(max(d))
+    sign = 1 if p[axis] >= 0 else -1
+    if d[axis] > 1e-6:
+        p[axis] = sign * half
+    return p, axis, sign        # <─ 新增 axis & sign
+
 
 # ---------- 主回调：收到立方体 Pose → 发布 Path ----------
 def pose_cb(msg):
@@ -74,26 +76,31 @@ def pose_cb(msg):
     u_l, v_l = build_uv(n_l)
 
     path = Path();  path.header = msg.header
-    for deg in range(0, 360, 5):              # 5° 采样
-        rad = math.radians(deg)
+    for deg in range(0, 360, 5):
+        ...
+        p_l, axis, sign = snap_to_face(p_l)
 
-        # 1⃣  圆上原始点 (局部)
-        p_l = [ center_l[i] +
-                R*( math.cos(rad)*u_l[i] + math.sin(rad)*v_l[i] )
-                for i in range(3) ]
+    # 1. 面法向(局部) → world
+        face_n_local = [0,0,0]; face_n_local[axis] = sign
+        face_n_world = tf.quaternion_matrix(q).dot(face_n_local + [0])[:3]
 
-        # 2⃣  压到最近面
-        p_l = snap_to_face(p_l)
+    # 2. 构造使 tool -Z 对齐 face_n_world 的四元数
+    #    a) 当前 -Z 轴向量
+        z_tool = (0,0,-1)
+        v = np.cross(z_tool, face_n_world)
+        s = math.sqrt((np.linalg.norm(z_tool)**2) * (np.linalg.norm(face_n_world)**2)) + np.dot(z_tool, face_n_world)
+        q_align = tf.unit_vector([s, *v])        # Hamilton 四元数 (w,x,y,z)
 
-        # 3⃣  转到 world
-        p_w = tf.quaternion_matrix(q).dot(p_l + [1])[:3] + [Cw.x, Cw.y, Cw.z+ L/2.0]
+    # 3. world 位姿
+        p_w = tf.quaternion_matrix(q).dot(p_l + [1])[:3] + [Cw.x, Cw.y, Cw.z]
 
-        # 4⃣  填 PoseStamped
         pose = PoseStamped()
         pose.header = msg.header
         pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = p_w
-        pose.pose.orientation = Qw            # 保持立方体姿态
+        pose.pose.orientation.w, pose.pose.orientation.x, \
+        pose.pose.orientation.y, pose.pose.orientation.z = q_align
         path.poses.append(pose)
+
 
     pub.publish(path)
 
