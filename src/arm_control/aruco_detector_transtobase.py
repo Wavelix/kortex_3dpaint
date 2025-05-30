@@ -134,7 +134,7 @@ class ArucoDetector:
         R, _ = cv2.Rodrigues(rvec)
         T = np.eye(4)
         T[:3, :3] = R
-        T[:3, 3] = tvec
+        T[:3, 3] = tvec * 1000  # 将单位从米转换为毫米
         return T
 
     def camera_info_callback(self, msg):
@@ -245,7 +245,7 @@ class ArucoDetector:
 if __name__ == '__main__':
     try:
         camera_calc = CameraPositionCalculator()
-        joint_angles = [0, 0, 0, 0, 0, 0]  # 示例，替换为实时读取的角度
+        joint_angles = [-36, -11, 120, -90, -50, -81]  # 示例，替换为实时读取的角度
 
         joint_angles[1] += 90
         joint_angles[2] += 90

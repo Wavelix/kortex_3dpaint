@@ -93,3 +93,5 @@ roslaunch kortex_driver kortex_driver.launch arm:=gen3_lite
 ``arm_control.py`` --> ``roslaunch kortex_3dpaint arm_control.launch __ns:=my_gen3_lite``
 
 ``aruco_detector.py`` --> ``roslaunch kortex_3dpaint aruco_detector.launch``
+
+``full_arm_control.py`` --> ``roslaunch kortex_3dpaint full_arm_control.launch``

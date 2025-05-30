@@ -127,12 +127,6 @@ class MoveItArm(object):
     except:
       return False 
 
-"""
-------------------------------------------
-main function
-------------------------------------------
-"""
-
 def main():
   example = MoveItArm()
 
@@ -148,15 +142,20 @@ def main():
     success &= example.reach_named_position("home")
     print (success)
 
-  # Open gripper
+  """
+  Picking up a pen
+    Open the gripper
+    Reach the pen
+    Move downward
+    Close the gripper
+    Reach the home position
+  """
   if example.is_gripper_present and success:
     rospy.loginfo("Opening the gripper...")
     success &= example.reach_gripper_position(0.6)
     print (success)
-
-  # Reach the pen
   if success:
-    rospy.loginfo("Reaching...")
+    rospy.loginfo("Reaching the pen...")
     pose = example.get_cartesian_pose()
     pose.position.x = 0.15
     pose.position.y = -0.2
@@ -164,53 +163,20 @@ def main():
     pose.orientation = geometry_msgs.msg.Quaternion(*quaternion_from_euler(0, pi, pi/4))
     success &= example.reach_cartesian_pose(pose=pose, tolerance=0.01, constraints=None)
     print (success)
-  # if success:
-  #   rospy.loginfo("Reaching Joint Angles...")  
-  #   success &= example.reach_joint_angles(tolerance=0.01, J=[0.387,-0.507,0.680,-0.198,-1.185,0.485])  # rad
-  #   print (success)
-
-  # Downward 0.1
   if success: 
-    rospy.loginfo("Picking ...")
+    rospy.loginfo("Downward...")
     actual_pose = example.get_cartesian_pose()
     actual_pose.position.z -= 0.1
     success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=None)
     print (success)
-
-  # Close gripper
   if example.is_gripper_present and success:
     rospy.loginfo("Closing the gripper ...")
     success &= example.reach_gripper_position(0.0)
     print (success)
-
-  # upwardward 0.06
-  # if success: 
-  #   rospy.loginfo("Picking ...")
-  #   actual_pose = example.get_cartesian_pose()
-  #   actual_pose.position.z += 0.06
-  #   success &= example.reach_cartesian_pose(pose=actual_pose, tolerance=0.01, constraints=None)
-  #   print (success)
-
-  # Pick up the pen
-  # if success:
-  #   rospy.loginfo("Picking up the pen...")
-  #   success &= example.reach_named_position("home")
-  #   print (success)
-
-#   if success:
-#     rospy.loginfo("Reaching Joint Angles...")  
-#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/2])  # rad
-#     print (success)
-  
-#   if success:
-#     rospy.loginfo("Reaching Joint Angles...")  
-#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,pi/4])  # rad
-#     print (success)
-
-#   if success:
-#     rospy.loginfo("Reaching Joint Angles...")  
-#     success &= example.reach_joint_angles(tolerance=0.01, J=[0,0,pi/2,pi/4,0,3*pi/4])  # rad
-#     print (success)
+  if success:
+    rospy.loginfo("Picking up the pen...")
+    success &= example.reach_named_position("home")
+    print (success)
     
   rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
 
