@@ -5,7 +5,7 @@
   <!-- 启动主程序 -->
   <node pkg="kortex_3dpaint"
         name="paint_node"
-        type="pick_and_place_moveit.py"
+        type="paint.py"
         args="__ns:=$(arg robot_name)"
         output="screen"
         launch-prefix="python3" />
