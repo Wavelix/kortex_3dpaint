@@ -462,8 +462,8 @@ def main():
             rospy.logwarn("Verification skipped as no ArUco marker pose was available.")
 
     if success:
-    example.draw_on_surface(shape='grid', size=0.08, step=0.015)
-    rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
+        example.draw_on_surface(shape='grid', size=0.08, step=0.015)
+        rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
 
     if not success:
         rospy.logerr("The hand-eye calibration process encountered errors.")
