@@ -98,6 +98,8 @@ import moveit_commander
 import numpy as np
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
+from trajectory_msgs.msg import JointTrajectoryPoint
+from moveit_commander.robot_trajectory import RobotTrajectory
 
 class MoveItArm(object):
     def __init__(self):
@@ -151,17 +153,26 @@ class MoveItArm(object):
             joint_angles = self.compute_ik(pose)
             if joint_angles:
                 joint_trajectory.append(joint_angles)
+                rospy.loginfo("Point %d/%d completed", len(joint_trajectory), num_points)
+            else:
+                rospy.logwarn("Skipping point %d due to IK failure", i + 1)
         return joint_trajectory
 
-    def execute_joint_trajectory(self, joint_traj, tolerance=0.01, delay=0.2):
-        for joints in joint_traj:
-            self.arm_group.set_goal_joint_tolerance(tolerance)
-            self.arm_group.set_joint_value_target(joints)
-            success = self.arm_group.go(wait=True)
-            rospy.sleep(delay)
-            if not success:
-                rospy.logwarn("Failed to reach joint configuration: %s", str(joints))
-                return False
+    def execute_joint_trajectory_batch(self, joint_traj, delay=0.2):
+        trajectory = RobotTrajectory()
+        trajectory.joint_trajectory.joint_names = self.arm_group.get_active_joints()
+        points = []
+
+        for i, joints in enumerate(joint_traj):
+            point = JointTrajectoryPoint()
+            point.positions = joints
+            point.time_from_start = rospy.Duration(i * delay)
+            points.append(point)
+
+        trajectory.joint_trajectory.points = points
+
+        rospy.loginfo("Executing entire trajectory...")
+        self.arm_group.execute(trajectory, wait=True)
         return True
 
     def draw_circle_with_ik(self, T_base_marker, radius=0.02, num_points=50):
@@ -169,7 +180,7 @@ class MoveItArm(object):
         rospy.loginfo("Generating joint-space trajectory for circle...")
         joint_traj = self.generate_joint_trajectory_on_circle(center, radius, num_points)
         rospy.loginfo("Executing joint-space circular motion...")
-        return self.execute_joint_trajectory(joint_traj)
+        return self.execute_joint_trajectory_batch(joint_traj)
 
 def main():
     robot = MoveItArm()
@@ -192,4 +203,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
