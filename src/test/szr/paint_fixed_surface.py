@@ -30,6 +30,10 @@ class MoveItArm(object):
         self.arm_group.set_named_target(target)
         return self.arm_group.go(wait=True)
 
+    def close_gripper(self, target="close"):
+        self.gripper_group.set_named_target(target)
+        self.gripper_group.go(wait=True)
+
     def compute_ik(self, pose):
         self.arm_group.set_pose_target(pose)
         plan = self.arm_group.plan()
@@ -83,11 +87,11 @@ class MoveItArm(object):
 
 def main():
     robot = MoveItArm()
-
+    robot.close_gripper(target = "open")
+    
     rospy.loginfo("Moving to home position...")
     success = robot.reach_named_position("home")
-    self.gripper_group.set_named_target("close")  # 或 "gripper_closed"
-    self.gripper_group.go(wait=True)
+    robot.close_gripper()
     if not success:
         rospy.logerr("Failed to reach home position.")
         return
