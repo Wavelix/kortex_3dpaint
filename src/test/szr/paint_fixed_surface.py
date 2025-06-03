@@ -7,6 +7,20 @@ import moveit_commander
 import numpy as np
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
+from kortex_driver.srv import GripperCommand, GripperCommandRequest
+from kortex_driver.msg import Finger
+
+def gripper_close(amount=1.0):
+    rospy.wait_for_service('/my_gen3_lite/base/gripper_command')
+    cmd_srv = rospy.ServiceProxy('/my_gen3_lite/base/gripper_command', GripperCommand)
+
+    req = GripperCommandRequest()
+    req.input.mode = GripperCommandRequest.ACTON
+    finger = Finger(finger_identifier=0, value=amount)  # 0.0=open, 1.0=close
+    req.input.finger.append(finger)
+
+    cmd_srv(req)
+    rospy.loginfo("Gripper closed to %.2f", amount)
 
 class MoveItArm(object):
     def __init__(self):
@@ -30,10 +44,6 @@ class MoveItArm(object):
         self.arm_group.set_named_target(target)
         return self.arm_group.go(wait=True)
     
-    def close_gripper(self, amount=0.9):
-        joint_goal = self.gripper_group.get_current_joint_values()
-        joint_goal[0] = amount          # 0.0=全开, 1.0≈全闭
-        self.gripper_group.go(joint_goal, wait=True)
 
     def compute_ik(self, pose):
         self.arm_group.set_pose_target(pose)
@@ -88,11 +98,11 @@ class MoveItArm(object):
 
 def main():
     robot = MoveItArm()
-    robot.close_gripper(0)
+    gripper_close(amount=0.0)
     
     rospy.loginfo("Moving to home position...")
     success = robot.reach_named_position("home")
-    robot.close_gripper(0.9)
+    gripper_close(amount=0.9)
     if not success:
         rospy.logerr("Failed to reach home position.")
         return
