@@ -1,113 +1,66 @@
 #!/usr/bin/env python3
-import rospy, math
+import rospy
+import math
 from geometry_msgs.msg import PoseStamped
 from nav_msgs.msg import Path
-from std_srvs.srv import SetBool, SetBoolResponse
+import numpy as np
 import tf.transformations as tf
 
-# ==================== 参数 ====================
-L   = rospy.get_param("/cube_edge", 0.05)   # 立方体边长 5 cm
-R   = 0.02                                  # 默认圆半径
-IDX = 0                                     # 圆心所在实体 (0-7 顶点, 8-19 边)
+# ==================== 固定参数 ====================
+L = 0.05    # 立方体边长（可选，实际无用）
+R = 0.02    # 圆轨迹半径
+U = 0.4     # 圆心 x
+V = 0.0     # 圆心 y
+W = 0.2     # 圆心 z
 
-# ---------- service：动态改半径 & 位置 ----------
-def set_param_cb(req):
-    global R, IDX
-    try:
-        r, idx = req.message.split(',')
-        R, IDX = float(r), int(idx)
-        rospy.loginfo(f"[traj] R={R:.3f}  idx={IDX}")
-        return SetBoolResponse(True, "ok")
-    except Exception as e:
-        return SetBoolResponse(False, str(e))
-
-# ---------- 依据 idx 给局部圆心 & 平面法向 ----------
-def get_local_center_normal(idx):
-    h = L/2.0
-    # 顶点 0-7
-    verts = [
-        (+h,+h,+h),(+h,+h,-h),(+h,-h,+h),(+h,-h,-h),
-        (-h,+h,+h),(-h,+h,-h),(-h,-h,+h),(-h,-h,-h)
-    ]
-    vert_norm = [(1,1,1),(1,1,-1),(1,-1,1),(1,-1,-1),
-                 (-1,1,1),(-1,1,-1),(-1,-1,1),(-1,-1,-1)]
-    # 12 条边 8-19（示例只列 4 条，其余可自行补）
-    edges = {
-        8 : ((+h,+h, 0), (0,0,1)),   # +X+Y 边（沿 Z）
-        9 : ((+h,-h, 0), (0,0,1)),   # +X-Y
-        10: ((-h,+h, 0), (0,0,1)),   # -X+Y
-        11: ((-h,-h, 0), (0,0,1)),   # -X-Y
-        # …… 12-19 依次补全
-    }
-
-    if idx < 8:
-        p = verts[idx]
-        n = tf.unit_vector(vert_norm[idx])
-    else:
-        p, n = edges[idx]
-    return list(p), list(n)
-
-# ---------- 工具：选平面基 u,v ----------
+# ==================== 工具函数 ====================
 def build_uv(n):
-    # 取一个不平行的临时向量
-    tmp = (0,0,1) if abs(n[2]) < 0.9 else (1,0,0)
-    u = tf.unit_vector(tf.cross(n, tmp))
-    v = tf.unit_vector(tf.cross(n, u))
-    return u, v                                # u ⟂ v ⟂ n
+    tmp = (0, 0, 1) if abs(n[2]) < 0.9 else (1, 0, 0)
+    u = tf.unit_vector(np.cross(n, tmp))
+    v = tf.unit_vector(np.cross(n, u))
+    return u, v
 
-# ---------- 工具：把点压到最近面 ----------
-def snap_to_face(p):
-    half = L/2.0
-    d = [abs(p[i]) - half for i in range(3)]
-    axis = d.index(max(d))
-    sign = 1 if p[axis] >= 0 else -1
-    if d[axis] > 1e-6:
-        p[axis] = sign * half
-    return p, axis, sign        # <─ 新增 axis & sign
+def quaternion_align_z_to(n_target):
+    """
+    生成一个四元数，使工具坐标系的 -Z 轴朝向 n_target。
+    """
+    z_tool = np.array([0, 0, -1])
+    n_target = np.array(n_target)
+    v = np.cross(z_tool, n_target)
+    s = math.sqrt(np.linalg.norm(z_tool)**2 * np.linalg.norm(n_target)**2) + np.dot(z_tool, n_target)
+    q = tf.unit_vector([s, *v])  # (w, x, y, z)
+    return q[1], q[2], q[3], q[0]  # 转为 ROS 顺序 (x, y, z, w)
 
+# ==================== 主逻辑 ====================
+def publish_fixed_path():
+    rospy.init_node("fixed_path_publisher")
 
-# ---------- 主回调：收到立方体 Pose → 发布 Path ----------
-def pose_cb(msg):
-    Cw = msg.pose.position                    # 中心 (world)
-    Qw = msg.pose.orientation
-    q = [Qw.w, Qw.x, Qw.y, Qw.z]
+    pub = rospy.Publisher("/desired_path", Path, queue_size=1, latch=True)
+    rospy.sleep(1.0)  # 等待连接
 
-    center_l, n_l = get_local_center_normal(IDX)
-    u_l, v_l = build_uv(n_l)
+    path = Path()
+    path.header.frame_id = "base_link"
 
-    path = Path();  path.header = msg.header
+    center = np.array([U, V, W])
+    normal = np.array([0, 0, 1])  # 默认朝上的平面
+    u, v = build_uv(normal)
+    quat = quaternion_align_z_to(normal)
+
     for deg in range(0, 360, 5):
-        ...
-        p_l, axis, sign = snap_to_face(p_l)
-
-    # 1. 面法向(局部) → world
-        face_n_local = [0,0,0]; face_n_local[axis] = sign
-        face_n_world = tf.quaternion_matrix(q).dot(face_n_local + [0])[:3]
-
-    # 2. 构造使 tool -Z 对齐 face_n_world 的四元数
-    #    a) 当前 -Z 轴向量
-        z_tool = (0,0,-1)
-        v = np.cross(z_tool, face_n_world)
-        s = math.sqrt((np.linalg.norm(z_tool)**2) * (np.linalg.norm(face_n_world)**2)) + np.dot(z_tool, face_n_world)
-        q_align = tf.unit_vector([s, *v])        # Hamilton 四元数 (w,x,y,z)
-
-    # 3. world 位姿
-        p_w = tf.quaternion_matrix(q).dot(p_l + [1])[:3] + [Cw.x, Cw.y, Cw.z]
+        theta = math.radians(deg)
+        p_offset = R * (math.cos(theta) * u + math.sin(theta) * v)
+        pos = center + p_offset
 
         pose = PoseStamped()
-        pose.header = msg.header
-        pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = p_w
-        pose.pose.orientation.w, pose.pose.orientation.x, \
-        pose.pose.orientation.y, pose.pose.orientation.z = q_align
+        pose.header.frame_id = "base_link"
+        pose.pose.position.x, pose.pose.position.y, pose.pose.position.z = pos
+        pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w = quat
+
         path.poses.append(pose)
 
-
     pub.publish(path)
+    rospy.loginfo(f"[traj] Published fixed circular path with {len(path.poses)} points.")
+    rospy.spin()
 
-# ==================== ROS 节点启动 ====================
-rospy.init_node("wrapped_circle_traj_node")
-pub = rospy.Publisher("/desired_path", Path, queue_size=1)
-rospy.Service("/set_traj_param", SetBool, set_param_cb)
-rospy.Subscriber("/aruco/cube_pose", PoseStamped, pose_cb)
-rospy.loginfo("[traj] ready. 例: rosservice call /set_traj_param '\"0.03,8\"'")
-rospy.spin()
+if __name__ == "__main__":
+    publish_fixed_path()
