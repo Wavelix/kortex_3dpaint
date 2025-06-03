@@ -2,6 +2,15 @@
     <!-- 启动命名空间 -->
     <arg name="ns" default="my_gen3_lite"/>
 
+    <!-- 启动 ros_control 控制器 -->
+    <node name="controller_spawner"
+          pkg="controller_manager"
+          type="spawner"
+          respawn="false"
+          output="screen"
+          ns="$(arg robot_ns)"
+          args="gen3_lite_joint_trajectory_controller" />
+
     <!-- 启动绘图节点 -->
     <node pkg="kortex_3dpaint"
           type="paint_fixed_surface.py"
