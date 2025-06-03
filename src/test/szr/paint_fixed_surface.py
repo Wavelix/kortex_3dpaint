@@ -63,7 +63,6 @@ class PaintRobot:
         (plan, fraction) = self.arm_group.compute_cartesian_path(
             poses,
             eef_step=0.005,
-            jump_threshold=0.0
         )
 
         if fraction > 0.9:
