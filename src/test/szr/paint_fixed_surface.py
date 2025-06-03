@@ -1,4 +1,4 @@
-# #!/usr/bin/env python3
+#!/usr/bin/env python3
 # import rospy
 # import sys
 # import numpy as np
@@ -89,7 +89,7 @@
 #     example.draw_on_fixed_surface(T_base_marker, shape='grid', size=0.045, step=0.01)
 
 #     roscpp_shutdown()
-#!/usr/bin/env python3
+
 import rospy
 import sys
 import numpy as np
