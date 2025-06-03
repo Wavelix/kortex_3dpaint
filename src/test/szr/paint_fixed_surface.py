@@ -7,8 +7,6 @@ import moveit_commander
 import numpy as np
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
-from kortex_driver.srv import GripperCommand, GripperCommandRequest
-from kortex_driver.msg import Finger
 
 
 class MoveItArm(object):
