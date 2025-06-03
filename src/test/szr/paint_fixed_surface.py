@@ -158,7 +158,6 @@ class MoveItArm(object):
         (plan, fraction) = self.arm_group.compute_cartesian_path(
             waypoints,
             eef_step=0.005,
-            jump_threshold=0.0
         )
 
         if fraction < 0.9:
