@@ -1,9 +1,5 @@
 #!/usr/bin/env python3
 
-"""
-经观察，rospy.loginfo("Effector to camera transformation (T_effector_camera):\n%s", str(self.handeye_matrix))输出的矩阵中，P位置的数据与物块实际位置接近，而非rospy.loginfo("x=%.4f, y=%.4f, z=%.4f",T_base_marker_calculated[0,3], T_base_marker_calculated[1,3], T_base_marker_calculated[2,3])
-"""
-
 import sys
 import time
 import rospy
@@ -66,7 +62,6 @@ class MoveItArm(object):
     def marker_pose_callback(self, msg):
         """Aruco标记位姿回调函数"""
         self.latest_marker_pose = msg.pose
-        # rospy.loginfo("Received ArUco marker pose.") # 频繁记录，方便调试
 
     def pose_to_matrix(self, pose):
         """将geometry_msgs/Pose转换为4x4齐次变换矩阵"""
@@ -115,7 +110,7 @@ class MoveItArm(object):
         
         # 等待Aruco位姿，设置一个合理的超时时间
         start_time = time.time()
-        timeout_duration = 5.0 # 5秒超时
+        timeout_duration = 3.0 # 5秒超时
         while self.latest_marker_pose is None:
             if time.time() - start_time > timeout_duration:
                 rospy.logwarn("Timeout: No ArUco marker pose received after %f seconds for data point %d.", 
@@ -143,8 +138,8 @@ class MoveItArm(object):
 
     def perform_handeye_calibration(self):
         """执行手眼标定计算"""
-        # 建议增加数据点数量以提高鲁棒性，至少15个点
-        if len(self.base_effector_poses) < 15: 
+        # 建议增加数据点数量以提高鲁棒性，至少10个点
+        if len(self.base_effector_poses) < 10: 
             rospy.logerr("Insufficient data points (%d), need at least 15 for reliable calibration.", len(self.base_effector_poses))
             return False
         
@@ -201,30 +196,26 @@ class MoveItArm(object):
         # 定义一组安全的标定位置（根据实际工作空间调整）
         # 用户要求不修改此部分，但请注意姿态多样性对标定结果的重要性
         calibration_poses = [
-            [0.2, 0.1, 0.45, 0, pi, 0],
-            [0.2, -0.1, 0.45, 0, pi, 0],
-            [0.2, 0.05, 0.45, 0, pi, pi/6],
-            [0.2, -0.05, 0.45, 0, pi, pi/6],
-            [0.3, 0.15, 0.4, 0, pi, 0],
-            [0.3, -0.15, 0.4, 0, pi, 0],
-            [0.35, 0.1, 0.4, 0, pi, 0],
-            [0.35, -0.1, 0.4, 0, pi, 0],
-            [0.35, 0.05, 0.3, 0, pi, 0], 
-            [0.35, -0.05, 0.3, 0, pi, 0],
-            [0.35, 0.05, 0.25, 0, pi, 0], 
-            [0.35, -0.05, 0.2, 0, pi, pi/6],
-            [0.3, 0.1, 0.4, 0, pi, 0],
-            [0.3, -0.1, 0.4, 0, pi, 0],
+            [0.3, 0.05, 0.25, 0, pi, pi/6],
+            [0.3, -0.05, 0.25, 0, pi, 0],
+            [0.3, 0.08, 0.3, 0, pi, pi/6],
+            [0.3, -0.08, 0.3, 0, pi, pi/3],
+            [0.3, 0.08, 0.25, 0, pi, pi/4],
+            [0.3, -0.08, 0.25, 0, pi, pi/3],
+            [0.35, 0.15, 0.25, 0, pi, pi/6],
+            [0.35, -0.15, 0.25, 0, pi, pi/3],
+            [0.35, 0.08, 0.25, 0, pi, pi/6],
+            [0.35, -0.08, 0.25, 0, pi, 0],
+            [0.35, 0.05, 0.2, 0, pi, pi/6],
+            [0.35, -0.05, 0.2, 0, pi, 0],
+            [0.3, 0.0, 0.25, 0, pi, pi/6],
+            [0.3, 0.0, 0.25, 0, pi, pi/3],
+            [0.35, 0.0, 0.25, 0, 5*pi/6, 0],
+            [0.35, 0.0, 0.25, 0, 5*pi/6, pi/6],
+            [0.4, 0.0, 0.3, 0, pi, 0],
+            [0.4, 0.0, 0.3, 0, pi, pi/6],
             [0.25, 0.0, 0.4, 0, pi, pi/6],
-            [0.25, 0.1, 0.3, 0, pi, pi/6],
-            [0.25, -0.1, 0.3, 0, pi, pi/6],
-            [0.35, 0.15, 0.4, 0, pi, pi/6],
-            [0.35, -0.15, 0.4, 0, pi, 0],
-            [0.3, 0.1, 0.3, 0, pi, pi/6],
-            [0.3, -0.1, 0.3, 0, pi, 0],
-            [0.35, -0.0, 0.4, 0, pi, pi/6],
-            [0.35, -0.0, 0.4, 0, pi, 0],
-            [0.2, -0.05, 0.45, 0, pi, 0],
+            [0.35, 0.0, 0.2, 0, pi, 0],
         ]
         
         for i, pose_params in enumerate(calibration_poses):
@@ -286,8 +277,8 @@ class MoveItArm(object):
 
         pose = arm_group.get_current_pose()
         rospy.loginfo("Actual cartesian pose is : ")
-        rospy.loginfo("Position: x=%.4f, y=%.4f, z=%.4f", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z)
-        rospy.loginfo("Orientation: x=%.4f, y=%.4f, z=%.4f, w=%.4f", pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w)
+        rospy.loginfo("Position: [x=%.4f, y=%.4f, z=%.4f]", pose.pose.position.x, pose.pose.position.y, pose.pose.position.z)
+        rospy.loginfo("Orientation: [x=%.4f, y=%.4f, z=%.4f, w=%.4f]", pose.pose.orientation.x, pose.pose.orientation.y, pose.pose.orientation.z, pose.pose.orientation.w)
 
         return pose.pose
 
@@ -373,7 +364,7 @@ def main():
         example.latest_marker_pose = None
         rospy.loginfo("Waiting for ArUco marker pose for verification...")
         start_time = time.time()
-        timeout_duration = 5.0 
+        timeout_duration = 3.0 
         while example.latest_marker_pose is None:
             if time.time() - start_time > timeout_duration:
                 rospy.logwarn("Timeout: No ArUco marker pose received for verification.")
@@ -385,6 +376,13 @@ def main():
             
             # 计算标记板在base坐标系中的理论位置 (T_base_marker = T_base_effector @ T_effector_camera @ T_camera_marker)
             T_base_marker_calculated = T_base_effector @ example.handeye_matrix @ T_camera_marker
+
+            rospy.loginfo("Effector position in base frame:")
+            rospy.loginfo("x=%.4f, y=%.4f, z=%.4f", 
+                          T_base_effector[0,3], T_base_effector[1,3], T_base_effector[2,3])
+            rospy.loginfo("Marker position in camera frame:")
+            rospy.loginfo("x=%.4f, y=%.4f, z=%.4f", 
+                          T_camera_marker[0,3], T_camera_marker[1,3], T_camera_marker[2,3])
             
             rospy.loginfo("Marker position in base frame (calculated based on calibration):")
             rospy.loginfo("x=%.4f, y=%.4f, z=%.4f", 

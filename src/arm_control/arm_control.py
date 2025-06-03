@@ -135,7 +135,9 @@ def main():
       rospy.delete_param("/kortex_examples_test_results/moveit_general_python")
   except:
       pass
-  
+  if success:
+    example.get_cartesian_pose()
+
   # Reaching Home
   if success:
     rospy.loginfo("Reaching Named Target Home...")

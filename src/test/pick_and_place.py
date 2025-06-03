@@ -214,13 +214,13 @@ class ArmMovement:
             # Activate notifications
             success &= self.example_subscribe_to_a_robot_notification()
             # Home the robot
-            success &= self.example_home_the_robot()
+            # success &= self.example_home_the_robot()
 
             # Set Cartesian reference frame
             success &= self.example_set_cartesian_reference_frame()
 
             # Move to position A
-            success &= self.example_send_cartesian_pose(0.5, 0.2, 0.1, 90, 0, 90) 
+            # success &= self.example_send_cartesian_pose(0.5, 0.2, 0.1, 90, 0, 90) 
             
             # Open gripper
             # if self.is_gripper_present:
@@ -232,9 +232,11 @@ class ArmMovement:
             # Close gripper to grasp object
             if self.is_gripper_present:
                 success &= self.example_send_gripper_command(1.0)
+            if self.is_gripper_present:
+                success &= self.example_send_gripper_command(0.0)
             
             # Move up with object
-            success &= self.example_send_cartesian_pose(0.5, 0.2, 0.2, 90, 0, 90)  
+            # success &= self.example_send_cartesian_pose(0.5, 0.2, 0.2, 90, 0, 90)  
 
             # Move to position B
             # success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)  
@@ -247,10 +249,10 @@ class ArmMovement:
             #     success &= self.example_send_gripper_command(0.0)
             
             # Move up
-            success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)
+            # success &= self.example_send_cartesian_pose(0.3, -0.2, 0.2, 90, 0, 90)
 
             # Return to home position
-            success &= self.example_home_the_robot()
+            # success &= self.example_home_the_robot()
 
         # For testing purposes
         rospy.set_param("/kortex_examples_test_results/arm_movement_python", success)

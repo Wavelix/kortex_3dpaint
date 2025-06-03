@@ -24,7 +24,8 @@ class MoveItArm(object):
         self.base_effector_poses = []  # 存储机械臂末端位姿 (base->effector)
         self.camera_marker_poses = []  # 存储标记板位姿 (camera->marker)
         self.handeye_matrix = None     # 存储标定结果 (effector->camera)
-        self.latest_marker_pose = None # 最新检测到的标记板位姿
+        self.latest_marker_pose_buffer = [] # 缓冲最新的标记板位姿数据，用于求平均
+        self.marker_pose_subscriber = None # 用于存储订阅者对象
         
         try:
             self.is_gripper_present = rospy.get_param(rospy.get_namespace() + "is_gripper_present", False)
@@ -50,9 +51,6 @@ class MoveItArm(object):
 
             rospy.loginfo("Initializing node in namespace " + rospy.get_namespace())
             
-            # 订阅Aruco检测位姿
-            rospy.Subscriber("/aruco_pose", PoseStamped, self.marker_pose_callback)
-            
         except Exception as e:
             rospy.logerr("Initialization failed: %s", str(e))
             self.is_init_success = False
@@ -60,9 +58,8 @@ class MoveItArm(object):
             self.is_init_success = True
 
     def marker_pose_callback(self, msg):
-        """Aruco标记位姿回调函数"""
-        self.latest_marker_pose = msg.pose
-        # rospy.loginfo("Received ArUco marker pose.") # 频繁记录，方便调试
+        """Aruco标记位姿回调函数，将数据添加到缓冲区"""
+        self.latest_marker_pose_buffer.append(msg.pose)
 
     def pose_to_matrix(self, pose):
         """将geometry_msgs/Pose转换为4x4齐次变换矩阵"""
@@ -104,29 +101,108 @@ class MoveItArm(object):
         
         return pose
 
-    def add_calibration_data(self):
-        """添加当前位姿下的标定数据，并强化等待机制"""
-        self.latest_marker_pose = None # 重置为None，确保等待新的Aruco数据
-        rospy.loginfo("Waiting for ArUco marker pose for data point %d...", len(self.base_effector_poses) + 1)
-        
-        # 等待Aruco位姿，设置一个合理的超时时间
+    def get_averaged_marker_pose(self, num_samples=10, timeout_duration=5.0, outlier_threshold=0.01):
+        """
+        订阅Aruco位姿，收集指定数量的样本并计算平均位姿。
+        可以剔除与中位数差异过大的值（基于位置）。
+        """
+        rospy.loginfo("Subscribing to /aruco_pose to collect %d samples...", num_samples)
+        self.latest_marker_pose_buffer = [] # 清空缓冲区
+        self.marker_pose_subscriber = rospy.Subscriber("/aruco_pose", PoseStamped, self.marker_pose_callback)
+
         start_time = time.time()
-        timeout_duration = 5.0 # 5秒超时
-        while self.latest_marker_pose is None:
+        while len(self.latest_marker_pose_buffer) < num_samples:
             if time.time() - start_time > timeout_duration:
-                rospy.logwarn("Timeout: No ArUco marker pose received after %f seconds for data point %d.", 
-                              timeout_duration, len(self.base_effector_poses) + 1)
-                return False
-            rospy.sleep(0.05) # 短暂休眠，避免占用过多CPU
+                rospy.logwarn(f"Timeout: Only {len(self.latest_marker_pose_buffer)} ArUco marker poses received after {timeout_duration} seconds.")
+                self.marker_pose_subscriber.unregister() # 取消订阅
+                return None
+            rospy.sleep(0.01) # 短暂休眠，避免占用过多CPU
+
+        self.marker_pose_subscriber.unregister() # 收集足够数据后取消订阅
+        rospy.loginfo(f"Collected {len(self.latest_marker_pose_buffer)} ArUco marker poses.")
+
+        if not self.latest_marker_pose_buffer:
+            return None
+
+        # 将位姿转换为矩阵，方便计算平均值
+        pose_matrices = [self.pose_to_matrix(p) for p in self.latest_marker_pose_buffer]
+
+        # ------------------- 离群值剔除 -------------------
+        # 基于位置的离群值剔除
+        positions = np.array([m[:3, 3] for m in pose_matrices])
         
-        rospy.loginfo("ArUco marker pose received for data point %d.", len(self.base_effector_poses) + 1)
+        # 计算每个坐标轴的中位数
+        median_x = np.median(positions[:, 0])
+        median_y = np.median(positions[:, 1])
+        median_z = np.median(positions[:, 2])
+
+        # 计算每个点与中位数位置的欧氏距离
+        distances = np.linalg.norm(positions - np.array([median_x, median_y, median_z]), axis=1)
+        
+        # 确定哪些点是内群点
+        inlier_indices = np.where(distances < outlier_threshold)[0]
+        
+        if len(inlier_indices) < num_samples / 2: # 如果剔除后样本过少，则不进行剔除
+            rospy.logwarn(f"Too many outliers detected ({num_samples - len(inlier_indices)}), proceeding with all samples.")
+            filtered_pose_matrices = pose_matrices
+        else:
+            filtered_pose_matrices = [pose_matrices[i] for i in inlier_indices]
+            rospy.loginfo(f"Filtered out {num_samples - len(filtered_pose_matrices)} outliers. Using {len(filtered_pose_matrices)} samples for averaging.")
+        # --------------------------------------------------
+
+        if not filtered_pose_matrices:
+            rospy.logwarn("No valid Aruco poses after filtering.")
+            return None
+
+        # 计算位置的平均值
+        avg_position = np.mean([m[:3, 3] for m in filtered_pose_matrices], axis=0)
+
+        # 对姿态进行平均 (使用四元数平均)
+        quaternions = np.array([[p.orientation.x, p.orientation.y, p.orientation.z, p.orientation.w] 
+                               for p in [self.matrix_to_pose(m) for m in filtered_pose_matrices]])
+        
+        # SVD方法计算平均四元数
+        # 详情见：https://github.com/Kjell-Kromann/quaternion_averaging
+        Q = quaternions.T @ quaternions
+        _, eigen_vectors = np.linalg.eigh(Q)
+        avg_quaternion = eigen_vectors[:, -1] # 最大的特征值对应的特征向量
+
+        # 确保w分量为正，如果为负则取反（保持最短旋转路径）
+        if avg_quaternion[3] < 0:
+            avg_quaternion *= -1
+
+        # 重新构建平均位姿
+        avg_pose = Pose()
+        avg_pose.position.x = avg_position[0]
+        avg_pose.position.y = avg_position[1]
+        avg_pose.position.z = avg_position[2]
+        avg_pose.orientation.x = avg_quaternion[0]
+        avg_pose.orientation.y = avg_quaternion[1]
+        avg_pose.orientation.z = avg_quaternion[2]
+        avg_pose.orientation.w = avg_quaternion[3]
+
+        return avg_pose
+
+
+    def add_calibration_data(self):
+        """添加当前位姿下的标定数据，读取10个aruco位置并求平均"""
+        rospy.loginfo("Collecting ArUco marker poses for data point %d...", len(self.base_effector_poses) + 1)
+        
+        averaged_marker_pose = self.get_averaged_marker_pose(num_samples=10, timeout_duration=5.0, outlier_threshold=0.01)
+        
+        if averaged_marker_pose is None:
+            rospy.logwarn("Failed to get averaged ArUco marker pose for data point %d.", 
+                          len(self.base_effector_poses) + 1)
+            return False
+        
+        rospy.loginfo("Averaged ArUco marker pose received for data point %d.", len(self.base_effector_poses) + 1)
         
         # 获取当前机械臂末端位姿
         effector_pose = self.get_cartesian_pose()
         
         # 转换为矩阵
         T_base_effector = self.pose_to_matrix(effector_pose)
-        T_camera_marker = self.pose_to_matrix(self.latest_marker_pose)
+        T_camera_marker = self.pose_to_matrix(averaged_marker_pose)
         
         # 存储数据 (T_base_effector 和 T_camera_marker)
         # 在 Eye-on-Hand 标定中，cv2.calibrateHandEye 期望输入 T_effector_base 和 T_marker_camera
@@ -139,8 +215,8 @@ class MoveItArm(object):
 
     def perform_handeye_calibration(self):
         """执行手眼标定计算"""
-        # 建议增加数据点数量以提高鲁棒性，至少15个点
-        if len(self.base_effector_poses) < 15: 
+        # 建议增加数据点数量以提高鲁棒性，至少10个点
+        if len(self.base_effector_poses) < 10: 
             rospy.logerr("Insufficient data points (%d), need at least 15 for reliable calibration.", len(self.base_effector_poses))
             return False
         
@@ -197,30 +273,27 @@ class MoveItArm(object):
         # 定义一组安全的标定位置（根据实际工作空间调整）
         # 用户要求不修改此部分，但请注意姿态多样性对标定结果的重要性
         calibration_poses = [
-            [0.2, 0.1, 0.45, 0, pi, 0],
-            [0.2, -0.1, 0.45, 0, pi, 0],
-            [0.2, 0.05, 0.45, 0, pi, pi/6],
-            [0.2, -0.05, 0.45, 0, pi, pi/6],
-            [0.3, 0.15, 0.4, 0, pi, 0],
-            [0.3, -0.15, 0.4, 0, pi, 0],
-            [0.35, 0.1, 0.4, 0, pi, 0],
-            [0.35, -0.1, 0.4, 0, pi, 0],
-            [0.35, 0.05, 0.3, 0, pi, 0], 
-            [0.35, -0.05, 0.3, 0, pi, 0],
-            [0.35, 0.05, 0.25, 0, pi, 0], 
-            [0.35, -0.05, 0.2, 0, pi, pi/6],
-            [0.3, 0.1, 0.4, 0, pi, 0],
-            [0.3, -0.1, 0.4, 0, pi, 0],
-            [0.25, 0.0, 0.4, 0, pi, pi/6],
-            [0.25, 0.1, 0.3, 0, pi, pi/6],
-            [0.25, -0.1, 0.3, 0, pi, pi/6],
-            [0.35, 0.15, 0.4, 0, pi, pi/6],
-            [0.35, -0.15, 0.4, 0, pi, 0],
-            [0.3, 0.1, 0.3, 0, pi, pi/6],
-            [0.3, -0.1, 0.3, 0, pi, 0],
-            [0.35, -0.0, 0.4, 0, pi, pi/6],
-            [0.35, -0.0, 0.4, 0, pi, 0],
-            [0.2, -0.05, 0.45, 0, pi, 0],
+            [0.3, 0.05, 0.25, 0, pi, pi/6],
+            [0.3, -0.05, 0.25, 0, pi, 0],
+            [0.3, 0.08, 0.3, 0, pi, pi/6],
+            [0.3, -0.08, 0.3, 0, pi, pi/3],
+            [0.3, 0.08, 0.25, 0, pi, pi/4],
+            [0.3, -0.08, 0.25, 0, pi, pi/3],
+            [0.35, 0.1, 0.25, 0, pi, pi/6],
+            [0.35, -0.1, 0.25, 0, pi, pi/3],
+            [0.35, 0.08, 0.25, 0, pi, pi/6],
+            [0.35, -0.08, 0.25, 0, pi, 0],
+            [0.35, 0.05, 0.2, 0, pi, pi/6],
+            [0.35, -0.05, 0.2, 0, pi, 0],
+            [0.3, 0.0, 0.25, 0, pi, pi/6],
+            [0.3, 0.0, 0.25, 0, pi, pi/3],
+            [0.35, 0.0, 0.25, 0, 5*pi/6, 0],
+            [0.35, 0.0, 0.25, 0, 5*pi/6, 0],
+            [0.35, 0.0, 0.25, 5*pi/6, 0, 0],
+            [0.35, 0.0, 0.25, 5*pi/6, 0, 0],
+            [0.35, 0.0, 0.2, pi, 0, pi/6],
+            [0.35, 0.0, 0.2, pi, 0, pi/3],
+            [0.35, 0.0, 0.2, 0, pi, 0],
         ]
         
         for i, pose_params in enumerate(calibration_poses):
@@ -366,18 +439,12 @@ def main():
         T_base_effector = example.pose_to_matrix(effector_pose)
         
         # 等待最新的Aruco位姿进行验证
-        example.latest_marker_pose = None
         rospy.loginfo("Waiting for ArUco marker pose for verification...")
-        start_time = time.time()
-        timeout_duration = 5.0 
-        while example.latest_marker_pose is None:
-            if time.time() - start_time > timeout_duration:
-                rospy.logwarn("Timeout: No ArUco marker pose received for verification.")
-                break
-            rospy.sleep(0.05)
+        # 验证时也进行数据平均以提高稳定性
+        verified_marker_pose = example.get_averaged_marker_pose(num_samples=10, timeout_duration=5.0, outlier_threshold=0.01)
 
-        if example.latest_marker_pose:
-            T_camera_marker = example.pose_to_matrix(example.latest_marker_pose)
+        if verified_marker_pose:
+            T_camera_marker = example.pose_to_matrix(verified_marker_pose)
             
             # 计算标记板在base坐标系中的理论位置 (T_base_marker = T_base_effector @ T_effector_camera @ T_camera_marker)
             T_base_marker_calculated = T_base_effector @ example.handeye_matrix @ T_camera_marker
@@ -392,7 +459,7 @@ def main():
                           q_calculated[0], q_calculated[1], q_calculated[2], q_calculated[3])
 
         else:
-            rospy.logwarn("Verification skipped as no ArUco marker pose was available.")
+            rospy.logwarn("Verification skipped as no ArUco marker pose was available or could be averaged.")
     
     rospy.set_param("/kortex_examples_test_results/moveit_general_python", success)
 
