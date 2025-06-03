@@ -1,0 +1,13 @@
+<launch>
+  <!-- 设置日志级别为 info -->
+  <param name="/rosconsole/config_file" value="$(find kortex_3dpaint)/config/rosconsole.config"/>
+
+  <!-- 启动控制节点 -->
+  <node pkg="kortex_3dpaint"
+        type="minimal_motion_test.py"
+        name="paint_node"
+        output="screen"
+        cwd="node">
+    <remap from="joint_states" to="/my_gen3_lite/joint_states"/>
+  </node>
+</launch>
