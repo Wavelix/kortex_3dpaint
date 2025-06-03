@@ -43,7 +43,7 @@ class MoveItArm(object):
             rospy.logwarn("Inverse kinematics failed for pose: %s", pose)
             return None
 
-    def generate_joint_trajectory_on_circle(self, center, radius=0.02, num_points=50, z_offset=0.005):
+    def generate_joint_trajectory_on_circle(self, center, radius=0.02, num_points=50, z_offset=0.000):
         joint_trajectory = []
         for i in range(num_points):
             theta = 2 * np.pi * i / num_points
