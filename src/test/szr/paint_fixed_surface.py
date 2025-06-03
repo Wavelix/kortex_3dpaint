@@ -157,23 +157,32 @@ class MoveItArm(object):
             else:
                 rospy.logwarn("Skipping point %d due to IK failure", i + 1)
         return joint_trajectory
-
-    def execute_joint_trajectory_batch(self, joint_traj, delay=0.2):
+    
+    def execute_joint_trajectory_batch(self, joint_traj):
+        joint_names = self.arm_group.get_active_joints()
+    
         trajectory = RobotTrajectory()
-        trajectory.joint_trajectory.joint_names = self.arm_group.get_active_joints()
+        trajectory.joint_trajectory.joint_names = joint_names
+    
         points = []
-
         for i, joints in enumerate(joint_traj):
             point = JointTrajectoryPoint()
             point.positions = joints
-            point.time_from_start = rospy.Duration(i * delay)
+            point.time_from_start = rospy.Duration(0)  # 先不设时间
             points.append(point)
-
+    
         trajectory.joint_trajectory.points = points
+    
+        # 时间参数化：让轨迹有速度/加速度信息
+        iptp = IterativeParabolicTimeParameterization()
+        success = iptp.compute_time_stamps(trajectory)
 
-        rospy.loginfo("Executing entire trajectory...")
-        self.arm_group.execute(trajectory, wait=True)
-        return True
+    if not success:
+        rospy.logerr("Failed to parameterize time for trajectory.")
+        return False
+
+    rospy.loginfo("Executing trajectory with %d points", len(points))
+    return self.arm_group.execute(trajectory, wait=True)
 
     def draw_circle_with_ik(self, T_base_marker, radius=0.02, num_points=50):
         center = T_base_marker[:3, 3]
