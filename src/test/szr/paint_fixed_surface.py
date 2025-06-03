@@ -125,8 +125,8 @@ class MoveItArm(object):
 
         self.arm_group.set_planning_time(10.0)
         self.arm_group.set_num_planning_attempts(5)
-        self.arm_group.set_max_velocity_scaling_factor(0.5)
-        self.arm_group.set_max_acceleration_scaling_factor(0.5)
+        self.arm_group.set_max_velocity_scaling_factor(0.2)
+        self.arm_group.set_max_acceleration_scaling_factor(0.2)
 
         rospy.sleep(1.0)
 
