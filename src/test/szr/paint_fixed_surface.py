@@ -97,7 +97,6 @@ import math
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
 from moveit_commander import MoveGroupCommander, RobotCommander, roscpp_initialize, roscpp_shutdown
-
 class PaintRobot:
     def __init__(self):
         roscpp_initialize(sys.argv)
@@ -106,6 +105,10 @@ class PaintRobot:
         self.robot = RobotCommander()
         self.arm_group = MoveGroupCommander("arm")
         self.gripper_group = MoveGroupCommander("gripper")
+
+        # 设置规划时间与重试次数
+        self.arm_group.set_planning_time(10.0)
+        self.arm_group.set_num_planning_attempts(5)
 
         rospy.sleep(1.0)
 
@@ -132,7 +135,7 @@ class PaintRobot:
                 points.append(np.array([x, y, z]))
             return points
 
-        def points_to_cartesian_poses(points_base, z_offset=0.005):
+        def points_to_cartesian_poses(points_base, z_offset=0.015):  # 抬高一点
             poses = []
             for pt in points_base:
                 pose = Pose()
@@ -150,15 +153,21 @@ class PaintRobot:
         rospy.loginfo("Generating circular drawing trajectory...")
         surface_center = T_base_marker[:3, 3]
         points = generate_circle_points(surface_center, radius, num_points)
-        poses = points_to_cartesian_poses(points, z_offset=0.003)
+        poses = points_to_cartesian_poses(points)
 
         rospy.loginfo("Executing circular trajectory...")
+        self.arm_group.stop()
+        self.arm_group.clear_pose_targets()
+
         (plan, fraction) = self.arm_group.compute_cartesian_path(
             poses,
-            eef_step=0.005,
+            eef_step=0.01,  # 不要太小
+            jump_threshold=0.0
         )
 
-        if fraction > 0.9:
+        rospy.loginfo("Trajectory planned with %.2f%% success" % (fraction * 100))
+
+        if fraction > 0.8:
             self.arm_group.execute(plan, wait=True)
             rospy.loginfo("Circular drawing complete.")
             return True
@@ -179,7 +188,9 @@ if __name__ == "__main__":
     T_base_marker[1, 3] = 0.0
     T_base_marker[2, 3] = 0.025 + 0.049 / 2  # 顶面中心高
 
-    example.draw_circle_on_surface(T_base_marker, radius=0.02, num_points=50)
+    success = example.draw_circle_on_surface(T_base_marker, radius=0.02, num_points=50)
+
+    if not success:
+        rospy.logerr("Failed to complete circular drawing.")
 
     roscpp_shutdown()
-
