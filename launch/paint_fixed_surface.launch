@@ -1,0 +1,13 @@
+<launch>
+    <!-- 启动命名空间 -->
+    <arg name="ns" default="my_gen3_lite"/>
+
+    <!-- 启动绘图节点 -->
+    <node pkg="kortex_3dpaint"
+          type="paint_fixed_surface.py"
+          name="paint_node"
+          output="screen"
+          ns="$(arg ns)"
+          respawn="false">
+    </node>
+</launch>
