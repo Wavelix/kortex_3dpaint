@@ -2,6 +2,13 @@
   <!-- 设置命名空间 -->
   <arg name="robot_name" default="my_gen3_lite" />
 
+  <!-- 1. 加载机器人模型 -->
+  <param name="robot_description" command="$(find xacro)/xacro '$(find your_robot_description_package)/urdf/your_robot.urdf.xacro'" />
+  
+  <!-- 2. 启动 move_group（如果你需要用 MoveIt） -->
+  <include file="$(find your_moveit_config_package)/launch/move_group.launch" />
+  
+  <!-- 3. 启动你自己的节点 -->
   <!-- 启动主程序 -->
   <node pkg="kortex_3dpaint"
         name="paint_node"
