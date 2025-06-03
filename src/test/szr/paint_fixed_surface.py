@@ -161,8 +161,7 @@ class PaintRobot:
 
         (plan, fraction) = self.arm_group.compute_cartesian_path(
             poses,
-            eef_step=0.01,  # 不要太小
-            jump_threshold=0.0
+            eef_step=0.02,  # 不要太小
         )
 
         rospy.loginfo("Trajectory planned with %.2f%% success" % (fraction * 100))
