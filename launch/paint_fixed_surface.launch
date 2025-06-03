@@ -1,22 +1,21 @@
 <launch>
-    <!-- 启动命名空间 -->
-    <arg name="ns" default="my_gen3_lite"/>
+  <!-- 统一命名空间参数 -->
+  <arg name="robot_ns" default="my_gen3_lite"/>
 
-    <!-- 启动 ros_control 控制器 -->
-    <node name="controller_spawner"
-          pkg="controller_manager"
-          type="spawner"
-          respawn="false"
-          output="screen"
-          ns="$(arg robot_ns)"
-          args="gen3_lite_joint_trajectory_controller" />
+  <!-- ros_control 控制器 spawner -->
+  <node name="controller_spawner"
+        pkg="controller_manager"
+        type="spawner"
+        ns="$(arg robot_ns)"
+        args="gen3_lite_joint_trajectory_controller"
+        output="screen"
+        respawn="false" />
 
-    <!-- 启动绘图节点 -->
-    <node pkg="kortex_3dpaint"
-          type="paint_fixed_surface.py"
-          name="paint_node"
-          output="screen"
-          ns="$(arg ns)"
-          respawn="false">
-    </node>
+  <!-- 绘图节点 -->
+  <node pkg="kortex_3dpaint"
+        type="paint_fixed_surface.py"
+        name="paint_node"
+        ns="$(arg robot_ns)"            <!-- 与控制器同一 namespace -->
+        output="screen"
+        respawn="false" />
 </launch>
