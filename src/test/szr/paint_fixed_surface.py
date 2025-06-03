@@ -87,8 +87,7 @@ class MoveItArm(object):
 
 def main():
     robot = MoveItArm()
-    robot.close_gripper(target = "open")
-    
+
     rospy.loginfo("Moving to home position...")
     success = robot.reach_named_position("home")
     robot.close_gripper()
