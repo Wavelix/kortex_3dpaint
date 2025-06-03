@@ -159,12 +159,23 @@ class MoveItArm(object):
             waypoints,
             eef_step=0.005,
         )
+
+        rospy.loginfo("Plan: %s", plan)
+        rospy.loginfo("Fraction: %.2f", fraction)
+        
         if fraction < 0.9:
             rospy.logwarn("Only %.2f%% of the path was planned. Execution may be incomplete.", fraction * 100)
         else:
             rospy.loginfo("%.2f%% of path planned successfully.", fraction * 100)
 
-        self.arm_group.execute(plan, wait=True)
+        if plan:
+            success = self.arm_group.execute(plan, wait=True)
+            if success:
+                rospy.loginfo("Execution successful!")
+            else:
+                rospy.logwarn("Execution failed!")
+        else:
+            rospy.logwarn("No valid plan returned!")
         return fraction
 
     def draw_circle_with_cartesian_path(self, T_base_marker, radius=0.02, num_points=50):
