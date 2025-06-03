@@ -112,7 +112,6 @@ from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
 from trajectory_msgs.msg import JointTrajectoryPoint
 from moveit_msgs.msg import RobotTrajectory
-from moveit_commander.time_parameterization import IterativeParabolicTimeParameterization
 
 
 class MoveItArm(object):
@@ -172,31 +171,30 @@ class MoveItArm(object):
                 rospy.logwarn("Skipping point %d due to IK failure", i + 1)
         return joint_trajectory
     
-    def execute_joint_trajectory_batch(self, joint_traj):
-        joint_names = self.arm_group.get_active_joints()
+    def execute_joint_trajectory_batch(self, joint_traj, delay=0.2):
+        from trajectory_msgs.msg import JointTrajectory, JointTrajectoryPoint
+        import copy
     
-        trajectory = RobotTrajectory()
-        trajectory.joint_trajectory.joint_names = joint_names
-    
+        traj_msg = JointTrajectory()
+        traj_msg.joint_names = self.arm_group.get_active_joints()
+        
         points = []
         for i, joints in enumerate(joint_traj):
             point = JointTrajectoryPoint()
             point.positions = joints
-            point.time_from_start = rospy.Duration(0)  # 先不设时间
+            point.time_from_start = rospy.Duration((i + 1) * delay)
             points.append(point)
     
-        trajectory.joint_trajectory.points = points
+        traj_msg.points = points
     
-        # 时间参数化：让轨迹有速度/加速度信息
-        iptp = IterativeParabolicTimeParameterization()
-        success = iptp.compute_time_stamps(trajectory)
+        # 构造 RobotTrajectory 并使用 MoveGroupCommander 执行
+        robot_traj = RobotTrajectory()
+        robot_traj.joint_trajectory = traj_msg
+    
+        rospy.loginfo("Executing trajectory with %d points...", len(points))
+        self.arm_group.execute(robot_traj, wait=True)
+        return True
 
-        if not success:
-            rospy.logerr("Failed to parameterize time for trajectory.")
-            return False
-    
-        rospy.loginfo("Executing trajectory with %d points", len(points))
-        return self.arm_group.execute(trajectory, wait=True)
 
     def draw_circle_with_ik(self, T_base_marker, radius=0.02, num_points=50):
         center = T_base_marker[:3, 3]
