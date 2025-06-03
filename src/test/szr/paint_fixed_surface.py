@@ -159,9 +159,6 @@ class MoveItArm(object):
             waypoints,
             eef_step=0.005,
         )
-
-        rospy.loginfo("Plan: %s", plan)
-        rospy.loginfo("Fraction: %.2f", fraction)
         
         if fraction < 0.9:
             rospy.logwarn("Only %.2f%% of the path was planned. Execution may be incomplete.", fraction * 100)
@@ -169,6 +166,8 @@ class MoveItArm(object):
             rospy.loginfo("%.2f%% of path planned successfully.", fraction * 100)
 
         if plan:
+            self.arm_group.set_start_state_to_current_state()
+
             success = self.arm_group.execute(plan, wait=True)
             if success:
                 rospy.loginfo("Execution successful!")
