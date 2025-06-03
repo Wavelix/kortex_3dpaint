@@ -4,7 +4,7 @@
 
   <!-- 正确加载 xacro 机器人模型 -->
   <param name="robot_description"
-         command="$(find xacro)/xacro '$(find kortex_description)/robots/gen3.urdf.xacro'" />
+         command="$(find xacro)/xacro '$(find kortex_description)/urdf/gen3_robotiq_2f_85.urdf.xacro'" />
 
   <!-- 启动 MoveIt -->
   <include file="$(find gen3_move_it_config)/launch/move_group.launch" />
