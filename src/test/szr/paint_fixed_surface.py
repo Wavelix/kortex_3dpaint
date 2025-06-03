@@ -62,12 +62,13 @@ class MoveItArm(object):
                 joint_trajectory.append(joint_angles)
         return joint_trajectory
 
-    def execute_joint_trajectory(self, joint_traj, tolerance=0.01, delay=0.2):
-        for joints in joint_traj:
+    def execute_joint_trajectory(self, joint_traj, tolerance=0.01, delay=0.02):
+        for i, joints in joint_traj:
             self.arm_group.set_goal_joint_tolerance(tolerance)
             self.arm_group.set_joint_value_target(joints)
             success = self.arm_group.go(wait=True)
             rospy.sleep(delay)
+            rospy.loginfo("Point %d/%d completed", i+1 , len(joint_trajectory))
             if not success:
                 rospy.logwarn("Failed to reach joint configuration: %s", str(joints))
                 return False
