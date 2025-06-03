@@ -99,7 +99,7 @@ import numpy as np
 from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
 from trajectory_msgs.msg import JointTrajectoryPoint
-from moveit_commander.robot_trajectory import RobotTrajectory
+from moveit_msgs.msg import RobotTrajectory
 
 class MoveItArm(object):
     def __init__(self):
