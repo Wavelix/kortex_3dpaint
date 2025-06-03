@@ -112,6 +112,8 @@ from geometry_msgs.msg import Pose
 from tf.transformations import quaternion_from_euler
 from trajectory_msgs.msg import JointTrajectoryPoint
 from moveit_msgs.msg import RobotTrajectory
+from moveit_commander.time_parameterization import IterativeParabolicTimeParameterization
+
 
 class MoveItArm(object):
     def __init__(self):
