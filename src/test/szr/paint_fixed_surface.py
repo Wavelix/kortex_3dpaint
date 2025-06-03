@@ -204,13 +204,25 @@ class MoveItArm(object):
         rospy.loginfo("Sending trajectory (%d points, dt=%.3fs)...", len(joint_traj), dt)
         client.send_goal(goal)
         client.wait_for_result()             # 阻塞直到完成
+        
+        # 4) 等待结果（设 30 秒超时，可按需调整）
+        finished = client.wait_for_result(rospy.Duration(30.0))
     
-        result = client.get_result()
-        if result.error_code == 0:
+        state  = client.get_state()            # actionlib.GoalStatus
+        result = client.get_result()           # 可能为 None
+    
+        if not finished:
+            client.cancel_goal()
+            rospy.logerr("Trajectory execution timeout => state=%d", state)
+            return False
+    
+        # SUCCEEDED = 3，ABORTED = 4（见 actionlib.GoalStatus 枚举）
+        if state == actionlib.GoalStatus.SUCCEEDED:
             rospy.loginfo("Trajectory execution SUCCESS")
             return True
         else:
-            rospy.logwarn("Trajectory execution ABORTED, error_code=%d", result.error_code)
+            err_code = result.error_code if result else -1
+            rospy.logwarn("Trajectory ABORTED : state=%d  error_code=%d", state, err_code)
             return False
 
 
