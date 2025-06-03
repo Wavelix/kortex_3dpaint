@@ -10,17 +10,6 @@ from tf.transformations import quaternion_from_euler
 from kortex_driver.srv import GripperCommand, GripperCommandRequest
 from kortex_driver.msg import Finger
 
-def gripper_close(amount=1.0):
-    rospy.wait_for_service('/my_gen3_lite/base/gripper_command')
-    cmd_srv = rospy.ServiceProxy('/my_gen3_lite/base/gripper_command', GripperCommand)
-
-    req = GripperCommandRequest()
-    req.input.mode = GripperCommandRequest.ACTON
-    finger = Finger(finger_identifier=0, value=amount)  # 0.0=open, 1.0=close
-    req.input.finger.append(finger)
-
-    cmd_srv(req)
-    rospy.loginfo("Gripper closed to %.2f", amount)
 
 class MoveItArm(object):
     def __init__(self):
@@ -98,11 +87,9 @@ class MoveItArm(object):
 
 def main():
     robot = MoveItArm()
-    gripper_close(amount=0.0)
     
     rospy.loginfo("Moving to home position...")
     success = robot.reach_named_position("home")
-    gripper_close(amount=0.9)
     if not success:
         rospy.logerr("Failed to reach home position.")
         return
