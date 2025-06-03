@@ -125,8 +125,8 @@ class MoveItArm(object):
 
         self.arm_group.set_planning_time(10.0)
         self.arm_group.set_num_planning_attempts(5)
-        self.arm_group.set_max_velocity_scaling_factor(0.001)
-        self.arm_group.set_max_acceleration_scaling_factor(0.001)
+        self.arm_group.set_max_velocity_scaling_factor(0.3)
+        self.arm_group.set_max_acceleration_scaling_factor(0.3)
 
         rospy.sleep(1.0)
 
@@ -184,6 +184,18 @@ class MoveItArm(object):
 
     #     rospy.loginfo("All points executed successfully.")
     #     return fraction
+
+    def execute_joint_trajectory(self, joint_traj, tolerance=0.01, delay=0.002):
+        for i, joints in enumerate(joint_traj):
+            self.arm_group.set_goal_joint_tolerance(tolerance)
+            self.arm_group.set_joint_value_target(joints)
+            success = self.arm_group.go(wait=True)
+            rospy.sleep(delay)
+            rospy.loginfo("Point %d/%d completed", i+1 , len(joint_traj))
+            if not success:
+                rospy.logwarn("Failed to reach joint configuration: %s", str(joints))
+                return False
+        return True
     
     def execute_cartesian_path(self, waypoints):
         (plan, fraction) = self.arm_group.compute_cartesian_path(
@@ -213,6 +225,7 @@ class MoveItArm(object):
         rospy.loginfo("Generating Cartesian waypoints for circular path...")
         waypoints = self.generate_cartesian_circle_path(center, radius, num_points)
         rospy.loginfo("Executing Cartesian path...")
+        self.execute_joint_trajectory(waypoints[0])
         return self.execute_cartesian_path(waypoints)
 
 def main():
