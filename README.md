@@ -9,6 +9,11 @@ Project for EE368 Robot Motion and Control, SUSTech
 
 Reference [Kinovarobotics/ros_kortex](https://github.com/Kinovarobotics/ros_kortex)
 
+<p>
+<img  width=18% src=".\arm.jpg" />
+<img  width=78% src=".\paint.png" />
+<p>
+
 ## Installation
 
 ### Setup
